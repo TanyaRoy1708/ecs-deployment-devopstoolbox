@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}K8s Manifest Explainer - DevOps Toolbox{% endblock %}
+
+{% block content %}
+<h2>Kubernetes Manifest Explainer</h2>
+<div class="tool-container">
+    <form method="POST" action="/tools/k8s">
+        <div class="form-group">
+            <label for="manifest">YAML Manifest</label>
+            <textarea id="manifest" name="manifest" rows="10" placeholder="apiVersion: apps/v1&#10;kind: Deployment..." required>{{ manifest|default('') }}</textarea>
+        </div>
+        <button type="submit" class="btn">Explain</button>
+    </form>
+
+    {% if result %}
+    <div class="result-box {% if result.success %}success{% else %}error{% endif %}">
+        {% if result.success %}
+            {% for item in result.explanations %}
+                <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #334155;">
+                    <h3>{{ item.kind }} - {{ item.name }}</h3>
+                    <p>{{ item.explanation }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p><strong>Error:</strong> {{ result.error }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

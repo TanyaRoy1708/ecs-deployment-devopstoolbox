@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>Welcome to DevOps Toolbox</h1>
+    <p>Your everyday collection of DevOps utilities, unified in one place.</p>
+</div>
+
+<div class="tool-grid">
+    <a href="/tools/cron" class="tool-card">
+        <h3>Cron Explainer</h3>
+        <p>Translate cron expressions into human-readable text.</p>
+        <span class="usage-badge">Used {{ stats.get('cron', 0) }} times</span>
+    </a>
+    <a href="/tools/jwt" class="tool-card">
+        <h3>JWT Decoder</h3>
+        <p>Decode JSON Web Tokens without sending secrets.</p>
+        <span class="usage-badge">Used {{ stats.get('jwt', 0) }} times</span>
+    </a>
+    <a href="/tools/cidr" class="tool-card">
+        <h3>CIDR Calculator</h3>
+        <p>Calculate network ranges, broadcast, and valid hosts.</p>
+        <span class="usage-badge">Used {{ stats.get('cidr', 0) }} times</span>
+    </a>
+    <a href="/tools/k8s" class="tool-card">
+        <h3>K8s Manifest Explainer</h3>
+        <p>Understand Kubernetes resources field by field.</p>
+        <span class="usage-badge">Used {{ stats.get('k8s', 0) }} times</span>
+    </a>
+    <a href="/tools/dockerfile" class="tool-card">
+        <h3>Dockerfile Linter</h3>
+        <p>Validate Dockerfiles against best practices.</p>
+        <span class="usage-badge">Used {{ stats.get('dockerfile', 0) }} times</span>
+    </a>
+</div>
+{% endblock %}

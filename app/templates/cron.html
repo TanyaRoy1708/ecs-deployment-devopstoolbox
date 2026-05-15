@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Cron Explainer - DevOps Toolbox{% endblock %}
+
+{% block content %}
+<h2>Cron Expression Explainer</h2>
+<div class="tool-container">
+    <form method="POST" action="/tools/cron">
+        <div class="form-group">
+            <label for="expression">Cron Expression</label>
+            <input type="text" id="expression" name="expression" placeholder="* * * * *" required
+                value="{{ expression|default('') }}">
+        </div>
+        <button type="submit" class="btn">Explain</button>
+    </form>
+
+    {% if result %}
+    <div class="result-box {% if result.success %}success{% else %}error{% endif %}">
+        {% if cache_hit %}
+        <span class="cache-badge">⚡ Cache Hit</span>
+        {% endif %}
+        {% if result.success %}
+            <p><strong>Explanation:</strong> {{ result.description }}</p>
+        {% else %}
+            <p><strong>Error:</strong> {{ result.error }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DevOps Toolbox{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="brand">DevOps Toolbox</a>
+            <div class="nav-links">
+                <a href="/tools/cron">Cron</a>
+                <a href="/tools/jwt">JWT</a>
+                <a href="/tools/cidr">CIDR</a>
+                <a href="/tools/k8s">K8s</a>
+                <a href="/tools/dockerfile">Dockerfile</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 DevOps Toolbox. Built with FastAPI.</p>
+        </div>
+    </footer>
+</body>
+</html>

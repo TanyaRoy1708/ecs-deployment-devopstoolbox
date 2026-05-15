@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}JWT Decoder - DevOps Toolbox{% endblock %}
+
+{% block content %}
+<h2>JWT Decoder</h2>
+<div class="tool-container">
+    <form method="POST" action="/tools/jwt">
+        <div class="form-group">
+            <label for="token">JSON Web Token</label>
+            <textarea id="token" name="token" rows="5" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                required>{{ token|default('') }}</textarea>
+        </div>
+        <button type="submit" class="btn">Decode</button>
+    </form>
+
+    {% if result %}
+    <div class="result-box {% if result.success %}success{% else %}error{% endif %}">
+        {% if cache_hit %}
+        <span class="cache-badge">⚡ Cache Hit</span>
+        {% endif %}
+        {% if result.success %}
+        {% if result.expired %}
+        <p class="warning">⚠️ This token has expired.</p>
+        {% endif %}
+        <h3>Header</h3>
+        <pre>{{ result.header | tojson(indent=2) }}</pre>
+        <h3>Payload</h3>
+        <pre>{{ result.payload | tojson(indent=2) }}</pre>
+        {% else %}
+        <p><strong>Error:</strong> {{ result.error }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

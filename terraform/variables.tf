@@ -1,0 +1,21 @@
+variable "project" {
+  description = "Name of the project"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region to deploy to"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+}
+
+variable "app_port" {
+  description = "Port the application runs on"
+  type        = number
+  default     = 8000
+}

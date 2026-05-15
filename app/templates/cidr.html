@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}CIDR Calculator - DevOps Toolbox{% endblock %}
+
+{% block content %}
+<h2>CIDR Calculator</h2>
+<div class="tool-container">
+    <form method="POST" action="/tools/cidr">
+        <div class="form-group">
+            <label for="cidr">CIDR Notation</label>
+            <input type="text" id="cidr" name="cidr" placeholder="192.168.1.0/24" required
+                value="{{ cidr|default('') }}">
+        </div>
+        <button type="submit" class="btn">Calculate</button>
+    </form>
+
+    {% if result %}
+    <div class="result-box {% if result.success %}success{% else %}error{% endif %}">
+        {% if cache_hit %}
+        <span class="cache-badge">⚡ Cache Hit</span>
+        {% endif %}
+        {% if result.success %}
+            <table>
+                <tr>
+                    <td><strong>Network Address:</strong></td>
+                    <td>{{ result.network_address }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Broadcast Address:</strong></td>
+                    <td>{{ result.broadcast_address }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Netmask:</strong></td>
+                    <td>{{ result.netmask }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Usable Hosts:</strong></td>
+                    <td>{{ result.num_hosts }}</td>
+                </tr>
+                <tr>
+                    <td><strong>First Host:</strong></td>
+                    <td>{{ result.first_host }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Last Host:</strong></td>
+                    <td>{{ result.last_host }}</td>
+                </tr>
+            </table>
+        {% else %}
+            <p><strong>Error:</strong> {{ result.error }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

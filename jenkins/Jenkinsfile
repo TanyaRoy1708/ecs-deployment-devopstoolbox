@@ -1,0 +1,120 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION      = 'us-east-1'
+        // This will be pulled from Jenkins credentials manager
+        AWS_ACCOUNT_ID  = credentials('aws-account-id')
+        ECR_REPO        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ecs-project"
+        IMAGE_TAG       = "${BUILD_NUMBER}"
+        ECS_CLUSTER     = 'ecs-project-cluster'
+        ECS_SERVICE     = 'ecs-project-service'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Trivy FS Scan') {
+            steps {
+                sh '''
+                    trivy fs --exit-code 1 \
+                             --severity HIGH,CRITICAL \
+                             --format table \
+                             --output trivy-fs-report.txt \
+                             .
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-fs-report.txt', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('app') {
+                    sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
+                    sh "docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest"
+                }
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh '''
+                    trivy image --exit-code 1 \
+                                --severity HIGH,CRITICAL \
+                                --format table \
+                                --output trivy-image-report.txt \
+                                ${ECR_REPO}:${IMAGE_TAG}
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-image-report.txt', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-credentials']]) {
+                    sh '''
+                        aws ecr get-login-password --region ${AWS_REGION} | \
+                        docker login --username AWS --password-stdin ${ECR_REPO}
+                        docker push ${ECR_REPO}:${IMAGE_TAG}
+                        docker push ${ECR_REPO}:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to ECS') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-credentials']]) {
+                    sh '''
+                        aws ecs update-service \
+                            --cluster ${ECS_CLUSTER} \
+                            --service ${ECS_SERVICE} \
+                            --force-new-deployment \
+                            --region ${AWS_REGION}
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-credentials']]) {
+                    sh '''
+                        aws ecs wait services-stable \
+                            --cluster ${ECS_CLUSTER} \
+                            --services ${ECS_SERVICE} \
+                            --region ${AWS_REGION}
+                        echo "Service is stable"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment successful — Build #${BUILD_NUMBER}"
+        }
+        failure {
+            echo "❌ Pipeline failed — check Trivy reports or ECS logs"
+        }
+        always {
+            sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} || true"
+        }
+    }
+}
