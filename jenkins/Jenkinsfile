@@ -76,38 +76,21 @@ pipeline {
 
         stage('Push to ECR') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-credentials']]) {
-                    sh '''
-                        aws ecr get-login-password --region ${AWS_REGION} | \
-                        docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                        docker push ${ECR_REPO}:${IMAGE_TAG}
-                        docker push ${ECR_REPO}:latest
-                    '''
-                }
+                sh '''
+                    aws ecr get-login-password --region ${AWS_REGION} | \
+                    docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                    docker push ${ECR_REPO}:${IMAGE_TAG}
+                    docker push ${ECR_REPO}:latest
+                '''
             }
         }
 
         stage('Deploy to ECS') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-credentials']]) {
+                dir('terraform') {
                     sh '''
-                        # Get current task definition
-                        TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${ECS_TASK_FAMILY} --region ${AWS_REGION})
-                        
-                        # Create new task definition with the new image tag
-                        NEW_TASK_DEF=$(echo $TASK_DEFINITION | jq --arg IMAGE "${ECR_REPO}:${IMAGE_TAG}" '.taskDefinition | .containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
-                        
-                        # Register the new task definition
-                        NEW_REVISION=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEF" --region ${AWS_REGION} | jq -r '.taskDefinition.taskDefinitionArn')
-                        
-                        # Update the ECS service to use the new task definition
-                        aws ecs update-service \
-                            --cluster ${ECS_CLUSTER} \
-                            --service ${ECS_SERVICE} \
-                            --task-definition $NEW_REVISION \
-                            --region ${AWS_REGION}
+                        terraform init
+                        terraform apply -var-file="environments/dev/terraform.tfvars" -var="image_tag=${IMAGE_TAG}" -auto-approve
                     '''
                 }
             }
@@ -118,16 +101,13 @@ pipeline {
                 timeout(time: 5, unit: 'MINUTES')
             }
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-                                  credentialsId: 'aws-credentials']]) {
-                    sh '''
-                        aws ecs wait services-stable \
-                            --cluster ${ECS_CLUSTER} \
-                            --services ${ECS_SERVICE} \
-                            --region ${AWS_REGION}
-                        echo "Service is stable"
-                    '''
-                }
+                sh '''
+                    aws ecs wait services-stable \
+                        --cluster ${ECS_CLUSTER} \
+                        --services ${ECS_SERVICE} \
+                        --region ${AWS_REGION}
+                    echo "Service is stable"
+                '''
             }
         }
     }
