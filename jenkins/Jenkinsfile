@@ -87,12 +87,13 @@ pipeline {
 
         stage('Deploy to ECS') {
             steps {
-                dir('terraform') {
-                    sh '''
-                        terraform init
-                        terraform apply -var-file="environments/dev/terraform.tfvars" -var="image_tag=${IMAGE_TAG}" -auto-approve
-                    '''
-                }
+                sh '''
+                    aws ecs update-service \
+                        --cluster ${ECS_CLUSTER} \
+                        --service ${ECS_SERVICE} \
+                        --force-new-deployment \
+                        --region ${AWS_REGION}
+                '''
             }
         }
 
