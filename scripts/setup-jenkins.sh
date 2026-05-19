@@ -2,7 +2,7 @@
 # setup-jenkins.sh (Run this script on an Ubuntu 22.04 or 24.04 EC2 instance)
 set -e
 
-echo "🚀 Installing Jenkins, Docker, Trivy, and AWS CLI on Ubuntu..."
+echo "🚀 Installing Jenkins, Docker, Trivy, AWS CLI, Terraform, and Grafana on Ubuntu..."
 
 # 1. Update OS and install prerequisites (Java 21, unzip, git)
 sudo apt-get update -y
@@ -49,9 +49,28 @@ unzip -q awscliv2.zip
 sudo ./aws/install
 rm -rf aws awscliv2.zip
 
+# 8. Install Terraform CLI
+echo "Installing Terraform..."
+wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install -y terraform
+
+# 9. Install Grafana
+echo "Installing Grafana..."
+sudo apt-get install -y apt-transport-https software-properties-common
+sudo mkdir -p /etc/apt/keyrings/
+wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install -y grafana
+sudo systemctl enable --now grafana-server
+
 echo "✅ Setup Complete!"
 echo "--------------------------------------------------------"
 echo "Jenkins Initial Admin Password:"
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 echo "--------------------------------------------------------"
 echo "Access Jenkins at: http://<your-ec2-public-ip>:8080"
+echo "Access Grafana at: http://<your-ec2-public-ip>:3000 (Default admin/admin)"
+echo "--------------------------------------------------------"
