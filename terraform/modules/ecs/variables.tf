@@ -8,3 +8,4 @@ variable "ecs_sg_id" {}
 variable "alb_target_group_arn" {}
 variable "ecr_repo_url" {}
 variable "app_port" {}
+variable "image_tag" {}

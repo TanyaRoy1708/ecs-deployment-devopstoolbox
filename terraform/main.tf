@@ -47,4 +47,5 @@ module "ecs" {
   alb_target_group_arn = module.alb.target_group_arn
   ecr_repo_url         = module.ecr.repository_url
   app_port             = var.app_port
+  image_tag            = var.image_tag
 }

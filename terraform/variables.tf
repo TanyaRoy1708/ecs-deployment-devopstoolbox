@@ -19,3 +19,9 @@ variable "app_port" {
   type        = number
   default     = 8000
 }
+
+variable "image_tag" {
+  description = "Docker image tag to deploy"
+  type        = string
+  default     = "latest"
+}

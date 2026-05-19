@@ -41,7 +41,7 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([{
     name      = "app"
-    image     = "${var.ecr_repo_url}:latest"
+    image     = "${var.ecr_repo_url}:${var.image_tag}"
     essential = true
     portMappings = [{
       containerPort = var.app_port
@@ -75,9 +75,5 @@ resource "aws_ecs_service" "app" {
     target_group_arn = var.alb_target_group_arn
     container_name   = "app"
     container_port   = var.app_port
-  }
-
-  lifecycle {
-    ignore_changes = [task_definition]
   }
 }
