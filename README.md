@@ -89,9 +89,17 @@ terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
 
 ---
 
-## Monitoring Setup (Grafana)
+## Monitoring & Alerting Setup (Grafana & CloudWatch)
+
+### Grafana Dashboards
 Grafana is automatically installed on port 3000 by the setup script.
 1. Open `http://<your-ec2-public-ip>:3000` (default credentials: `admin` / `admin`).
 2. Add a new Data Source: Select **CloudWatch**.
 3. Set Authentication Provider to **EC2 IAM Role** and select region `us-east-1`.
 4. Create a new dashboard querying the `ECS/ContainerInsights` namespace for your CPU and Memory metrics.
+
+### Threshold-Based Alerting (CloudWatch Alarm)
+The Terraform ECS module automatically provisions an active threshold-based CloudWatch metric alarm (`ecs-project-cpu-high`).
+* **Metric Monitored:** `CPUUtilization` (Average) under `AWS/ECS`.
+* **Alarm Condition:** Triggers if average CPU utilization exceeds `80%` over 2 consecutive evaluation periods of 1 minute (`period = 60`, `evaluation_periods = 2`).
+
