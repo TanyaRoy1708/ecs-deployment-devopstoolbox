@@ -34,9 +34,13 @@ sudo systemctl enable --now jenkins docker
 sudo usermod -aG docker jenkins
 sudo usermod -aG docker ubuntu
 
-# 6. Install Trivy for security scanning
+# 6. Install Trivy for security scanning via APT repository
 echo "Installing Trivy..."
-curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install -y trivy
 
 # 7. Install AWS CLI v2
 echo "Installing AWS CLI v2..."
