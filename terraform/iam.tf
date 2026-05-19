@@ -27,3 +27,13 @@ resource "aws_iam_instance_profile" "jenkins_ec2_profile" {
   name = "Jenkins-EC2-Deployer-Profile"
   role = aws_iam_role.jenkins_ec2_role.name
 }
+
+resource "aws_iam_role_policy_attachment" "jenkins_s3_policy" {
+  role       = aws_iam_role.jenkins_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "jenkins_dynamodb_policy" {
+  role       = aws_iam_role.jenkins_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+}
