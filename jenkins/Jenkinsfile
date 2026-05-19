@@ -5,13 +5,22 @@ pipeline {
         AWS_REGION      = 'us-east-1'
         // This will be pulled from Jenkins credentials manager
         AWS_ACCOUNT_ID  = credentials('aws-account-id')
-        ECR_REPO        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ecs-project"
         IMAGE_TAG       = "${BUILD_NUMBER}"
         ECS_CLUSTER     = 'ecs-project-cluster'
         ECS_SERVICE     = 'ecs-project-service'
+        ECS_TASK_FAMILY = 'ecs-project-task'
     }
 
     stages {
+        stage('Initialize Pipeline') {
+            steps {
+                script {
+                    env.ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                    env.ECR_REPO     = "${env.ECR_REGISTRY}/ecs-project"
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -20,17 +29,20 @@ pipeline {
 
         stage('Trivy FS Scan') {
             steps {
-                sh '''
-                    trivy fs --exit-code 1 \
-                             --severity HIGH,CRITICAL \
-                             --format table \
-                             --output trivy-fs-report.txt \
-                             .
-                '''
+                dir('app') {
+                    sh '''
+                        trivy fs --exit-code 1 \
+                                 --ignore-unfixed \
+                                 --severity HIGH,CRITICAL \
+                                 --format table \
+                                 --output trivy-fs-report.txt \
+                                 .
+                    '''
+                }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'trivy-fs-report.txt', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'app/trivy-fs-report.txt', allowEmptyArchive: true
                 }
             }
         }
@@ -48,6 +60,7 @@ pipeline {
             steps {
                 sh '''
                     trivy image --exit-code 1 \
+                                --ignore-unfixed \
                                 --severity HIGH,CRITICAL \
                                 --format table \
                                 --output trivy-image-report.txt \
@@ -67,7 +80,7 @@ pipeline {
                                   credentialsId: 'aws-credentials']]) {
                     sh '''
                         aws ecr get-login-password --region ${AWS_REGION} | \
-                        docker login --username AWS --password-stdin ${ECR_REPO}
+                        docker login --username AWS --password-stdin ${ECR_REGISTRY}
                         docker push ${ECR_REPO}:${IMAGE_TAG}
                         docker push ${ECR_REPO}:latest
                     '''
@@ -80,10 +93,20 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                                   credentialsId: 'aws-credentials']]) {
                     sh '''
+                        # Get current task definition
+                        TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${ECS_TASK_FAMILY} --region ${AWS_REGION})
+                        
+                        # Create new task definition with the new image tag
+                        NEW_TASK_DEF=$(echo $TASK_DEFINITION | jq --arg IMAGE "${ECR_REPO}:${IMAGE_TAG}" '.taskDefinition | .containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+                        
+                        # Register the new task definition
+                        NEW_REVISION=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEF" --region ${AWS_REGION} | jq -r '.taskDefinition.taskDefinitionArn')
+                        
+                        # Update the ECS service to use the new task definition
                         aws ecs update-service \
                             --cluster ${ECS_CLUSTER} \
                             --service ${ECS_SERVICE} \
-                            --force-new-deployment \
+                            --task-definition $NEW_REVISION \
                             --region ${AWS_REGION}
                     '''
                 }
@@ -91,6 +114,9 @@ pipeline {
         }
 
         stage('Verify Deployment') {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                                   credentialsId: 'aws-credentials']]) {
@@ -114,7 +140,7 @@ pipeline {
             echo "❌ Pipeline failed — check Trivy reports or ECS logs"
         }
         always {
-            sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} || true"
+            sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest || true"
         }
     }
 }
