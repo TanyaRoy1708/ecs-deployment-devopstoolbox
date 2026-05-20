@@ -65,15 +65,24 @@ terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
 *Note: This will provision the VPC, ECR, ALB, Security Groups, ECS Cluster, ECS Service, and create the IAM Role/Instance Profile (`Jenkins-EC2-Deployer-Profile`).*
 
 ### 4. Configure the Jenkins Server
-1. Launch an Ubuntu 22.04 or 24.04 EC2 instance.
-2. Copy `scripts/setup-jenkins.sh` to the instance and execute it:
-   ```bash
-   chmod +x setup-jenkins.sh
-   ./setup-jenkins.sh
-   ```
-   *This automatically installs Jenkins, Docker, Trivy, AWS CLI, Terraform, and Grafana on the instance.*
-3. In the AWS Console, navigate to **EC2 -> Instances**, select your Jenkins server, click **Actions -> Security -> Modify IAM Role**, and attach the **`Jenkins-EC2-Deployer-Profile`**.
-4. Log into Jenkins at `http://<your-ec2-public-ip>:8080` using the admin password printed by the setup script.
+You can deploy and fully configure the Jenkins server in a zero-touch fashion using **EC2 User Data**:
+
+1. **Launch an EC2 Instance:**
+   * Choose an Ubuntu 22.04 or 24.04 AMI.
+   * Choose `t2.micro` or `t3.micro`.
+2. **Configure IAM Role & User Data:**
+   * Under **Advanced Details**, set the **IAM Instance Profile** to `Jenkins-EC2-Deployer-Profile` (created during step 3).
+   * Scroll down to the **User Data** field and paste the contents of `scripts/setup-jenkins.sh`.
+3. **Retrieve Credentials:**
+   * After the instance starts, it will take about 2–3 minutes to automatically install Jenkins, Docker, Trivy, AWS CLI, Terraform, and Grafana.
+   * Simply SSH into the instance and run the following command to retrieve your initial Jenkins admin password:
+     ```bash
+     sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+     ```
+   * *Note: You can monitor the progress of the automated user-data installation by tailing the cloud-init log:*
+     ```bash
+     tail -f /var/log/cloud-init-output.log
+     ```
 
 ### 5. Create & Run the Jenkins Pipelines
 To achieve industry-standard segregation of duties, the project includes two distinct, independent pipelines:
