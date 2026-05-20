@@ -115,10 +115,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment successful — Build #${BUILD_NUMBER}"
+            echo "Deployment successful — Build #${BUILD_NUMBER}"
         }
         failure {
-            echo "❌ Pipeline failed — check Trivy reports or ECS logs"
+            echo "Pipeline failed — check Trivy reports or ECS logs"
         }
         always {
             sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest || true"
