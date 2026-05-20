@@ -37,3 +37,8 @@ resource "aws_iam_role_policy_attachment" "jenkins_dynamodb_policy" {
   role       = aws_iam_role.jenkins_ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
 }
+
+resource "aws_iam_role_policy_attachment" "jenkins_cloudwatch_policy" {
+  role       = aws_iam_role.jenkins_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
+}
