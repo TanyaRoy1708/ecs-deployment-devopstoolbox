@@ -75,17 +75,39 @@ terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
 3. In the AWS Console, navigate to **EC2 -> Instances**, select your Jenkins server, click **Actions -> Security -> Modify IAM Role**, and attach the **`Jenkins-EC2-Deployer-Profile`**.
 4. Log into Jenkins at `http://<your-ec2-public-ip>:8080` using the admin password printed by the setup script.
 
-### 5. Create the Jenkins Pipeline
-1. Create a new **Pipeline** job in Jenkins.
+### 5. Create & Run the Jenkins Pipelines
+To achieve industry-standard segregation of duties, the project includes two distinct, independent pipelines:
+
+#### Pipeline A: Application Deployment (CI/CD)
+This pipeline is fully automated and triggered by Git pushes/pull requests. It scans and builds the application code and deploys it to the pre-existing ECS Fargate infrastructure.
+1. Create a new **Pipeline** job in Jenkins named `devops-toolbox-app`.
 2. Under **Build Triggers**, select **GitHub hook trigger for GITScm polling**.
-3. In the **Pipeline** section, set:
+3. In the **Pipeline** section, configure:
    * **Definition:** Pipeline script from SCM
    * **SCM:** Git
    * **Repository URL:** Your GitHub fork repository URL
    * **Branch Specifier:** `*/main`
    * **Script Path:** `jenkins/Jenkinsfile`
-4. Add your GitHub Webhook in your repository settings: `http://<jenkins-ec2-public-ip>:8080/github-webhook/`.
-5. Run the pipeline manually once to trigger the initial build and push.
+4. Add your GitHub Webhook in your repository settings pointing to: `http://<jenkins-ec2-public-ip>:8080/github-webhook/`.
+5. Push a commit or trigger the pipeline manually by clicking **Build Now** to run the initial container deployment.
+
+#### Pipeline B: Infrastructure Management (Terraform IaC)
+This pipeline is manually triggered and parameterized. It is used strictly by DevOps engineers to provision, update, or tear down the AWS modular infrastructure.
+1. Create a new **Pipeline** job in Jenkins named `devops-toolbox-infra`.
+2. **Leave Build Triggers unchecked** (this pipeline should never run automatically).
+3. In the **Pipeline** section, configure:
+   * **Definition:** Pipeline script from SCM
+   * **SCM:** Git
+   * **Repository URL:** Your GitHub fork repository URL
+   * **Branch Specifier:** `*/main`
+   * **Script Path:** `jenkins/Jenkinsfile.infra`
+4. Run the pipeline manually **once** using **Build Now** to checkout the SCM and register parameters with Jenkins.
+5. For all subsequent runs, use the **Build with Parameters** option:
+   * **ACTION (Choice):** 
+     - `Terraform Plan`: Dry run of infrastructure modifications.
+     - `Terraform Apply`: Provisions/updates all AWS modular infrastructure.
+     - `Terraform Destroy`: Tears down all AWS resources and configurations.
+   * **CONFIRM_DESTROY (Checkbox):** Must be checked to allow `Terraform Destroy` to run. If not checked, the destroy stage will safely abort to prevent accidental teardowns.
 
 ---
 
