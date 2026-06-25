@@ -38,20 +38,20 @@ def _explain_deployment(doc: dict) -> str:
         # Liveness / readiness probes
         for c in containers:
             if c.get("livenessProbe"):
-                parts.append(f"✅ Liveness probe configured on container `{c.get('name', 'unnamed')}`.")
+                parts.append(f"Liveness probe configured on container `{c.get('name', 'unnamed')}`.")
             else:
-                parts.append(f"⚠️ No liveness probe on container `{c.get('name', 'unnamed')}` — Kubernetes cannot detect if the app is deadlocked.")
+                parts.append(f"No liveness probe on container `{c.get('name', 'unnamed')}` — Kubernetes cannot detect if the app is deadlocked.")
             if c.get("readinessProbe"):
-                parts.append(f"✅ Readiness probe configured on container `{c.get('name', 'unnamed')}`.")
+                parts.append(f"Readiness probe configured on container `{c.get('name', 'unnamed')}`.")
             else:
-                parts.append(f"⚠️ No readiness probe on container `{c.get('name', 'unnamed')}` — traffic may be sent before the app is ready.")
+                parts.append(f"No readiness probe on container `{c.get('name', 'unnamed')}` — traffic may be sent before the app is ready.")
 
             # Resource limits
             resources = c.get("resources", {})
             if resources.get("limits"):
                 parts.append(f"Resource limits set: `{resources['limits']}`.")
             else:
-                parts.append("⚠️ No resource limits — container can consume unbounded CPU/memory on the node.")
+                parts.append("No resource limits — container can consume unbounded CPU/memory on the node.")
 
     return " ".join(parts)
 
@@ -74,7 +74,7 @@ def _explain_service(doc: dict) -> str:
     if selector:
         parts.append(f"Selects pods with labels: `{selector}`.")
     else:
-        parts.append("⚠️ No selector — this Service will not route to any pods.")
+        parts.append("No selector — this Service will not route to any pods.")
 
     if ports:
         port_strs = [f"{p.get('port')}→{p.get('targetPort', p.get('port'))} ({p.get('protocol', 'TCP')})" for p in ports]

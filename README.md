@@ -2,6 +2,10 @@
 
 This repository contains the code and infrastructure configuration to deploy a stateless FastAPI web application (DevOps Toolbox) to AWS ECS Fargate using a modular Terraform setup and a self-hosted Jenkins CI/CD pipeline.
 
+<p align="center">
+  <img src="./docs/architecture.svg" alt="ECS Fargate Deployment Architecture" width="100%"/>
+</p>
+
 ## System Architecture
 * **Compute:** AWS ECS Fargate (stateless task container running on port 8000).
 * **Load Balancing:** Application Load Balancer (ALB) exposing port 80 and forwarding to Fargate.
@@ -20,17 +24,25 @@ This repository contains the code and infrastructure configuration to deploy a s
 │   ├── main.py               # Entrypoint & /health route
 │   ├── Dockerfile            # Multi-stage production build (non-root user)
 │   ├── routers/              # Application routes
-│   └── services/             # Core business logic
+│   ├── services/             # Core business logic
+│   └── tests/                # Pytest unit tests for application logic
 ├── terraform/                # Infrastructure as Code
 │   ├── main.tf               # Calls modules (VPC, ALB, ECS, ECR, Security)
 │   ├── backend.tf            # Configures S3 backend + DynamoDB state locking
 │   ├── iam.tf                # IAM Instance Profile for Jenkins server
+│   ├── outputs.tf            # Exports module outputs (e.g., ALB DNS, Cluster name)
+│   ├── variables.tf          # Input variable definitions
 │   └── modules/              # Individual modular components
 ├── jenkins/                  # Pipeline definition
 │   └── Jenkinsfile           # Declarative CI/CD pipeline
-└── scripts/                  # Bootstrapping utility scripts
-    ├── bootstrap-backend.sh  # Sets up remote state S3 bucket & DynamoDB table
-    └── setup-jenkins.sh      # Installs Jenkins, Docker, Trivy, CLI, Terraform & Grafana
+├── scripts/                  # Bootstrapping utility scripts
+│   ├── bootstrap-backend.sh  # Sets up remote state S3 bucket & DynamoDB table
+│   └── setup-jenkins.sh      # Installs Jenkins, Docker, Trivy, CLI, Terraform & Grafana
+├── docs/                     # Documentation and architecture diagrams
+│   ├── architecture.svg      # Diagram of the ECS Fargate deployment
+│   └── dashboard.png         # Example CloudWatch/Grafana dashboard view
+└── monitoring/               # Observability configurations
+    └── grafana-dashboard.json# Pre-configured Grafana dashboard template
 ```
 
 ---

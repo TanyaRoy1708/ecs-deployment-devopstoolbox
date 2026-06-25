@@ -4,8 +4,14 @@
 *.tfstate
 *.tfstate.backup
 *.tfplan
+*.tfplan.json
 crash.log
 crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+*.tfvars.json
 
 # Python
 __pycache__/
@@ -14,9 +20,13 @@ __pycache__/
 *.so
 .Python
 env/
+venv/
+.venv/
+ENV/
+.env
 build/
-develop-eggs/
 dist/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -30,15 +40,47 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.env
-.venv
-venv/
-ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
 
-# OS / IDE
+# Trivy reports
+trivy-fs-report.txt
+trivy-image-report.txt
+
+# Docker
+docker-compose.override.yml
+
+# AWS & Secrets
+.aws/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+aws-credentials
+credentials
+
+# OS
 .DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*~
+
+# IDEs
 .vscode/
 .idea/
+*.swp
+*.swo
+*.iml
 
-# Project Files to Ignore
-plan.md
+# Logs & Temp
+*.log
+*.tmp
+*.bak
+*.orig

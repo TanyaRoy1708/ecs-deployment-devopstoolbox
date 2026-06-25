@@ -16,9 +16,9 @@
     <div class="result-box {% if result.passed %}success{% else %}warning{% endif %}">
         {% if result.success %}
             {% if result.passed %}
-                <p>✅ Dockerfile looks good! No obvious issues found.</p>
+                <p>Dockerfile looks good! No obvious issues found.</p>
             {% else %}
-                <p>⚠️ Found {{ result.warnings|length }} warning(s):</p>
+                <p>Found {{ result.warnings|length }} warning(s):</p>
                 <ul>
                     {% for w in result.warnings %}
                         <li>{{ w }}</li>

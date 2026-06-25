@@ -3,5 +3,7 @@ uvicorn==0.46.0
 Jinja2==3.1.6
 python-multipart==0.0.27
 PyYAML==6.0.3
-PyJWT==2.12.1
 cron-descriptor==2.0.8
+# Test dependencies
+pytest==8.2.0
+httpx==0.27.0

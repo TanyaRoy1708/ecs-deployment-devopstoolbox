@@ -1,3 +1,17 @@
+# =============================================================================
+# ARCHITECTURAL DECISION NOTE: Public Subnets for ECS Tasks
+# -----------------------------------------------------------------------------
+# ECS Fargate tasks are intentionally placed in public subnets for this demo
+# to avoid NAT Gateway costs (~$32/month per AZ). Security is enforced at the
+# Security Group layer — tasks only accept inbound traffic from the ALB's
+# Security Group ID (not from 0.0.0.0/0), making them unreachable from the
+# internet directly.
+#
+# In a production or compliance-sensitive environment (PCI-DSS, HIPAA, SOC2),
+# move ECS tasks to private subnets and route outbound traffic through a
+# NAT Gateway to achieve network-level isolation (defense-in-depth).
+# =============================================================================
+
 data "aws_availability_zones" "available" {
   state = "available"
 }

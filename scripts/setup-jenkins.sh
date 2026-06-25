@@ -64,7 +64,7 @@ sudo systemctl enable --now grafana-server
 
 # 10. Print Setup Completion info
 echo "==========================================================="
-echo "🎉 Jenkins & DevOps Server Setup Complete!"
+echo "Jenkins & DevOps Server Setup Complete!"
 echo "==========================================================="
 echo "Access URLs:"
 echo "- Jenkins: http://<your-ec2-public-ip>:8080"
@@ -73,6 +73,6 @@ echo "-----------------------------------------------------------"
 echo "To retrieve the Jenkins Initial Admin Password, SSH into the instance and run:"
 echo "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
 echo "==========================================================="
-echo "✅ Automated Bootstrap Complete!"
+echo "Automated Bootstrap Complete!"
 
 

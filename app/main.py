@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from routers import cron, jwt, cidr, k8s, dockerfile_router
+from routers import cron, cidr, k8s, dockerfile_router
 
 app = FastAPI(title="DevOps Toolbox")
 
@@ -20,7 +20,7 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 # Include routers
 app.include_router(cron.router)
-app.include_router(jwt.router)
+
 app.include_router(cidr.router)
 app.include_router(k8s.router)
 app.include_router(dockerfile_router.router)
@@ -35,7 +35,6 @@ async def health():
 async def home(request: Request):
     stats = {
         "cron": 0,
-        "jwt": 0,
         "cidr": 0,
         "k8s": 0,
         "dockerfile": 0
