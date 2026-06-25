@@ -5,6 +5,8 @@ REGION="us-east-1"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 BUCKET_NAME="ecs-project-tfstate-${ACCOUNT_ID}"
 TABLE_NAME="terraform-state-lock"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TERRAFORM_DIR="${SCRIPT_DIR}/../terraform"
 
 echo "Bootstrapping Terraform Remote State..."
 
@@ -30,9 +32,21 @@ else
     echo "DynamoDB table $TABLE_NAME already exists."
 fi
 
-echo -e "\nBootstrap complete!"
-echo "--------------------------------------------------------"
-echo "IMPORTANT: Update your terraform/backend.tf with:"
-echo "bucket = \"${BUCKET_NAME}\""
-echo "--------------------------------------------------------"
+# 3. Generate terraform/backend.tf from template (backend.tf is gitignored)
+TEMPLATE="${TERRAFORM_DIR}/backend.tf.example"
+OUTPUT="${TERRAFORM_DIR}/backend.tf"
 
+if [ ! -f "$TEMPLATE" ]; then
+    echo "ERROR: $TEMPLATE not found. Cannot generate backend.tf."
+    exit 1
+fi
+
+sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$TEMPLATE" > "$OUTPUT"
+echo "Generated ${OUTPUT} with bucket: ${BUCKET_NAME}"
+echo "Note: backend.tf is gitignored — your Account ID will not be committed."
+
+echo ""
+echo "Bootstrap complete!"
+echo "--------------------------------------------------------"
+echo "Next step: cd terraform && terraform init"
+echo "--------------------------------------------------------"

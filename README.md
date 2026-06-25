@@ -82,6 +82,7 @@ You can deploy and fully configure the Jenkins server in a zero-touch fashion us
 1. **Launch an EC2 Instance:**
    * Choose an Ubuntu 22.04 or 24.04 AMI.
    * Choose `t2.micro` or `t3.micro`.
+   * **Network Settings (Security Group):** Click **Select existing security group** and choose the `ecs-project-jenkins-sg` (provisioned by Terraform, allows ports 22, 8080, and 3000).
 2. **Configure IAM Role & User Data:**
    * Under **Advanced Details**, set the **IAM Instance Profile** to `Jenkins-EC2-Deployer-Profile` (created during step 3).
    * Scroll down to the **User Data** field and paste the contents of `scripts/setup-jenkins.sh`.

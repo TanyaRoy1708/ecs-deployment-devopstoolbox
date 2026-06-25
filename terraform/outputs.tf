@@ -22,3 +22,8 @@ output "vpc_id" {
   description = "ID of the deployed VPC"
   value       = module.networking.vpc_id
 }
+
+output "jenkins_sg_id" {
+  description = "Security Group ID for the Jenkins EC2 Instance"
+  value       = module.security.jenkins_sg_id
+}
