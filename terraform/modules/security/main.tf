@@ -1,6 +1,6 @@
 resource "aws_security_group" "alb" {
   name        = "${var.project}-alb-sg"
-  description = "Allow inbound HTTP"
+  description = "Allow inbound HTTP/HTTPS"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -8,6 +8,16 @@ resource "aws_security_group" "alb" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  dynamic "ingress" {
+    for_each = var.domain_name != "" ? [1] : []
+    content {
+      from_port   = 443
+      to_port     = 443
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   egress {
