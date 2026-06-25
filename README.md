@@ -30,6 +30,20 @@ A complete, modern DevOps project demonstrating:
 * **Security Scanning:** Trivy scanning filesystem and built Docker images.
 * **Credentials:** IAM Instance Profile attached to Jenkins EC2 instance (eliminates static AWS Access Keys).
 
+## 💰 FinOps & Cost Estimation
+Cloud Financial Management (FinOps) was a core consideration for this project. The architecture was deliberately designed to be cost-effective for a portfolio/startup environment while maintaining a strong security posture.
+
+| Resource | Specification | Estimated Cost (Monthly) |
+|----------|---------------|--------------------------|
+| **Application Load Balancer** | 1 ALB (us-east-1) | ~$16.00 |
+| **ECS Fargate** | 2 Tasks (0.25 vCPU, 0.5 GB) | ~$16.00 |
+| **Jenkins Server** | 1 EC2 (t3.micro) | ~$7.50 |
+| **Storage & State** | S3 & DynamoDB | ~$1.00 |
+| **Total Estimated Cost** | | **~$40.50 / month** |
+
+> **Architectural Trade-off (Cost vs. Isolation):** 
+> By utilizing a **Public Subnet architecture** restricted by tight **Security Groups** (tasks only accept traffic from the ALB), this design avoids the need for AWS NAT Gateways and VPC Endpoints. This deliberate architectural decision saves approximately **$55 to $90 per month** in baseline networking costs, achieving a secure environment without the enterprise price tag.
+
 ---
 
 ## Repository Structure
