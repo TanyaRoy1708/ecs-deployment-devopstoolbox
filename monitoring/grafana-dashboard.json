@@ -9,9 +9,7 @@
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
         "query": {
-          "datasource": {
-            "name": "-- Grafana --"
-          },
+          "datasource": { "name": "-- Grafana --" },
           "group": "grafana",
           "kind": "DataQuery",
           "spec": {},
@@ -20,12 +18,17 @@
       }
     }
   ],
-  "cursorSync": "Off",
+  "cursorSync": "Crosshair",
   "editable": true,
   "elements": {
+
     "panel-1": {
       "kind": "Panel",
       "spec": {
+        "id": 1,
+        "title": "Running Task Count",
+        "description": "Number of ECS Fargate tasks currently in RUNNING state. Should be >= 1 at all times.",
+        "links": [],
         "data": {
           "kind": "QueryGroup",
           "spec": {
@@ -34,36 +37,34 @@
                 "kind": "PanelQuery",
                 "spec": {
                   "hidden": false,
+                  "refId": "A",
                   "query": {
-                    "datasource": {
-                      "name": "cfmmo6p7r7f9ce"
-                    },
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
                     "group": "cloudwatch",
                     "kind": "DataQuery",
+                    "version": "v0",
                     "spec": {
+                      "namespace": "ECS/ContainerInsights",
+                      "metricName": "RunningTaskCount",
                       "dimensions": {
                         "ClusterName": "ecs-project-cluster",
                         "ServiceName": "ecs-project-service"
                       },
+                      "statistic": "Maximum",
+                      "queryMode": "Metrics",
+                      "region": "default",
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "",
                       "expression": "",
                       "id": "",
-                      "label": "",
                       "logGroups": [],
                       "matchExact": false,
-                      "metricEditorMode": 0,
-                      "metricName": "CPUUtilization",
-                      "metricQueryType": 0,
-                      "namespace": "AWS/ECS",
                       "period": "",
                       "queryLanguage": "CWLI",
-                      "queryMode": "Metrics",
-                      "region": "us-east-1",
-                      "sqlExpression": "",
-                      "statistic": "Average"
-                    },
-                    "version": "v0"
-                  },
-                  "refId": "A"
+                      "sqlExpression": ""
+                    }
+                  }
                 }
               }
             ],
@@ -71,74 +72,46 @@
             "transformations": []
           }
         },
-        "description": "",
-        "id": 1,
-        "links": [],
-        "title": "ECS Fargate CPU Utilization",
         "vizConfig": {
-          "group": "gauge",
+          "group": "stat",
           "kind": "VizConfig",
+          "version": "13.0.1+security-01",
           "spec": {
             "fieldConfig": {
               "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "max": 1,
-                "min": 0,
+                "color": { "mode": "thresholds" },
                 "thresholds": {
                   "mode": "absolute",
                   "steps": [
-                    {
-                      "color": "green",
-                      "value": 0
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
+                    { "color": "red", "value": 0 },
+                    { "color": "green", "value": 1 }
                   ]
                 },
-                "unit": "percent"
+                "unit": "none"
               },
               "overrides": []
             },
             "options": {
-              "barShape": "flat",
-              "barWidthFactor": 0.5,
-              "effects": {
-                "barGlow": false,
-                "centerGlow": false,
-                "gradient": true
-              },
-              "endpointMarker": "point",
-              "minVizHeight": 75,
-              "minVizWidth": 75,
+              "colorMode": "background",
+              "graphMode": "none",
+              "justifyMode": "center",
               "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "segmentCount": 1,
-              "segmentSpacing": 0.3,
-              "shape": "gauge",
-              "showThresholdLabels": false,
-              "showThresholdMarkers": true,
-              "sizing": "auto",
-              "sparkline": true,
-              "textMode": "auto"
+              "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+              "textMode": "auto",
+              "wideLayout": true
             }
-          },
-          "version": "13.0.1+security-01"
+          }
         }
       }
     },
+
     "panel-2": {
       "kind": "Panel",
       "spec": {
+        "id": 2,
+        "title": "ALB Healthy Host Count",
+        "description": "Number of healthy targets registered to the ALB. A drop to 0 means the service is completely down.",
+        "links": [],
         "data": {
           "kind": "QueryGroup",
           "spec": {
@@ -147,36 +120,33 @@
                 "kind": "PanelQuery",
                 "spec": {
                   "hidden": false,
+                  "refId": "A",
                   "query": {
-                    "datasource": {
-                      "name": "cfmmo6p7r7f9ce"
-                    },
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
                     "group": "cloudwatch",
                     "kind": "DataQuery",
+                    "version": "v0",
                     "spec": {
+                      "namespace": "AWS/ApplicationELB",
+                      "metricName": "HealthyHostCount",
                       "dimensions": {
-                        "ClusterName": "ecs-project-cluster",
-                        "ServiceName": "ecs-project-service"
+                        "LoadBalancer": "app/ecs-project-alb/e2a708c5818b9d3a"
                       },
-                      "expression": "",
-                      "id": "",
-                      "label": "",
-                      "logGroups": [],
-                      "matchExact": false,
-                      "metricEditorMode": 0,
-                      "metricName": "MemoryUtilization",
-                      "metricQueryType": 0,
-                      "namespace": "AWS/ECS",
-                      "period": "",
-                      "queryLanguage": "CWLI",
+                      "statistic": "Minimum",
                       "queryMode": "Metrics",
                       "region": "us-east-1",
-                      "sqlExpression": "",
-                      "statistic": "Average"
-                    },
-                    "version": "v0"
-                  },
-                  "refId": "A"
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "period": "",
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
                 }
               }
             ],
@@ -184,74 +154,46 @@
             "transformations": []
           }
         },
-        "description": "",
-        "id": 2,
-        "links": [],
-        "title": "ECS Fargate Memory Utilization",
         "vizConfig": {
-          "group": "gauge",
+          "group": "stat",
           "kind": "VizConfig",
+          "version": "13.0.1+security-01",
           "spec": {
             "fieldConfig": {
               "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "max": 1,
-                "min": 0,
+                "color": { "mode": "thresholds" },
                 "thresholds": {
                   "mode": "absolute",
                   "steps": [
-                    {
-                      "color": "green",
-                      "value": 0
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
+                    { "color": "red", "value": 0 },
+                    { "color": "green", "value": 1 }
                   ]
                 },
-                "unit": "percent"
+                "unit": "none"
               },
               "overrides": []
             },
             "options": {
-              "barShape": "flat",
-              "barWidthFactor": 0.5,
-              "effects": {
-                "barGlow": false,
-                "centerGlow": false,
-                "gradient": true
-              },
-              "endpointMarker": "point",
-              "minVizHeight": 75,
-              "minVizWidth": 75,
+              "colorMode": "background",
+              "graphMode": "none",
+              "justifyMode": "center",
               "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "segmentCount": 1,
-              "segmentSpacing": 0.3,
-              "shape": "gauge",
-              "showThresholdLabels": false,
-              "showThresholdMarkers": true,
-              "sizing": "auto",
-              "sparkline": true,
-              "textMode": "auto"
+              "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+              "textMode": "auto",
+              "wideLayout": true
             }
-          },
-          "version": "13.0.1+security-01"
+          }
         }
       }
     },
+
     "panel-3": {
       "kind": "Panel",
       "spec": {
+        "id": 3,
+        "title": "CPU Utilization (Current)",
+        "description": "Current average CPU utilization of the ECS Fargate service. Alarm triggers at 80%.",
+        "links": [],
         "data": {
           "kind": "QueryGroup",
           "spec": {
@@ -260,36 +202,34 @@
                 "kind": "PanelQuery",
                 "spec": {
                   "hidden": false,
+                  "refId": "A",
                   "query": {
-                    "datasource": {
-                      "name": "cfmmo6p7r7f9ce"
-                    },
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
                     "group": "cloudwatch",
                     "kind": "DataQuery",
+                    "version": "v0",
                     "spec": {
+                      "namespace": "AWS/ECS",
+                      "metricName": "CPUUtilization",
                       "dimensions": {
-                        "AvailabilityZone": "*",
-                        "LoadBalancer": "app/ecs-project-alb/e2a708c5818b9d3a"
+                        "ClusterName": "ecs-project-cluster",
+                        "ServiceName": "ecs-project-service"
                       },
-                      "expression": "",
-                      "id": "",
-                      "label": "",
-                      "logGroups": [],
-                      "matchExact": false,
-                      "metricEditorMode": 0,
-                      "metricName": "RequestCount",
-                      "metricQueryType": 0,
-                      "namespace": "AWS/ApplicationELB",
-                      "period": "5m",
-                      "queryLanguage": "CWLI",
+                      "statistic": "Average",
                       "queryMode": "Metrics",
                       "region": "us-east-1",
-                      "sqlExpression": "",
-                      "statistic": "Sum"
-                    },
-                    "version": "v0"
-                  },
-                  "refId": "A"
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "period": "",
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
                 }
               }
             ],
@@ -297,20 +237,195 @@
             "transformations": []
           }
         },
-        "description": "",
-        "id": 3,
-        "links": [],
-        "title": "ALB Request Count (5m sum)",
         "vizConfig": {
-          "group": "timeseries",
+          "group": "stat",
           "kind": "VizConfig",
+          "version": "13.0.1+security-01",
           "spec": {
             "fieldConfig": {
               "defaults": {
-                "color": {
-                  "mode": "palette-classic"
+                "color": { "mode": "thresholds" },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": 0 },
+                    { "color": "yellow", "value": 60 },
+                    { "color": "red", "value": 80 }
+                  ]
                 },
+                "unit": "percent",
+                "min": 0,
+                "max": 100
+              },
+              "overrides": []
+            },
+            "options": {
+              "colorMode": "background",
+              "graphMode": "area",
+              "justifyMode": "center",
+              "orientation": "auto",
+              "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+              "textMode": "auto",
+              "wideLayout": true
+            }
+          }
+        }
+      }
+    },
+
+    "panel-4": {
+      "kind": "Panel",
+      "spec": {
+        "id": 4,
+        "title": "Memory Utilization (Current)",
+        "description": "Current average memory utilization of the ECS Fargate service.",
+        "links": [],
+        "data": {
+          "kind": "QueryGroup",
+          "spec": {
+            "queries": [
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "refId": "A",
+                  "query": {
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
+                    "group": "cloudwatch",
+                    "kind": "DataQuery",
+                    "version": "v0",
+                    "spec": {
+                      "namespace": "AWS/ECS",
+                      "metricName": "MemoryUtilization",
+                      "dimensions": {
+                        "ClusterName": "ecs-project-cluster",
+                        "ServiceName": "ecs-project-service"
+                      },
+                      "statistic": "Average",
+                      "queryMode": "Metrics",
+                      "region": "us-east-1",
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "period": "",
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "queryOptions": {},
+            "transformations": []
+          }
+        },
+        "vizConfig": {
+          "group": "stat",
+          "kind": "VizConfig",
+          "version": "13.0.1+security-01",
+          "spec": {
+            "fieldConfig": {
+              "defaults": {
+                "color": { "mode": "thresholds" },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": 0 },
+                    { "color": "yellow", "value": 60 },
+                    { "color": "red", "value": 80 }
+                  ]
+                },
+                "unit": "percent",
+                "min": 0,
+                "max": 100
+              },
+              "overrides": []
+            },
+            "options": {
+              "colorMode": "background",
+              "graphMode": "area",
+              "justifyMode": "center",
+              "orientation": "auto",
+              "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+              "textMode": "auto",
+              "wideLayout": true
+            }
+          }
+        }
+      }
+    },
+
+    "panel-5": {
+      "kind": "Panel",
+      "spec": {
+        "id": 5,
+        "title": "CPU Utilization Over Time",
+        "description": "CPU utilization trend. Sustained values above 80% trigger the CloudWatch alarm (ecs-project-cpu-high).",
+        "links": [],
+        "data": {
+          "kind": "QueryGroup",
+          "spec": {
+            "queries": [
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "refId": "A",
+                  "query": {
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
+                    "group": "cloudwatch",
+                    "kind": "DataQuery",
+                    "version": "v0",
+                    "spec": {
+                      "namespace": "AWS/ECS",
+                      "metricName": "CPUUtilization",
+                      "dimensions": {
+                        "ClusterName": "ecs-project-cluster",
+                        "ServiceName": "ecs-project-service"
+                      },
+                      "statistic": "Average",
+                      "queryMode": "Metrics",
+                      "region": "us-east-1",
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "CPU %",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "period": "",
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "queryOptions": {},
+            "transformations": []
+          }
+        },
+        "vizConfig": {
+          "group": "timeseries",
+          "kind": "VizConfig",
+          "version": "13.0.1+security-01",
+          "spec": {
+            "fieldConfig": {
+              "defaults": {
+                "color": { "mode": "palette-classic" },
                 "custom": {
+                  "drawStyle": "line",
+                  "lineInterpolation": "smooth",
+                  "lineWidth": 2,
+                  "fillOpacity": 15,
+                  "gradientMode": "opacity",
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "thresholdsStyle": { "mode": "line" },
                   "axisBorderShow": false,
                   "axisCenteredZero": false,
                   "axisColorMode": "text",
@@ -318,94 +433,42 @@
                   "axisPlacement": "auto",
                   "barAlignment": 0,
                   "barWidthFactor": 0.6,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
+                  "hideFrom": { "legend": false, "tooltip": false, "viz": false },
                   "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
                   "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
+                  "scaleDistribution": { "type": "linear" },
                   "showValues": false,
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
+                  "stacking": { "group": "A", "mode": "none" }
                 },
-                "max": 5,
-                "min": 0,
                 "thresholds": {
                   "mode": "absolute",
                   "steps": [
-                    {
-                      "color": "green",
-                      "value": 0
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
+                    { "color": "green", "value": 0 },
+                    { "color": "red", "value": 80 }
                   ]
                 },
-                "unit": "none"
+                "unit": "percent",
+                "min": 0,
+                "max": 100
               },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "targetgroup/ecs-project-tg/1d99ba3d060bee31",
-                    "scope": "series"
-                  },
-                  "properties": [
-                    {
-                      "id": "custom.hideFrom",
-                      "value": {
-                        "legend": true,
-                        "tooltip": true,
-                        "viz": true
-                      }
-                    }
-                  ]
-                }
-              ]
+              "overrides": []
             },
             "options": {
-              "annotations": {
-                "clustering": -1,
-                "multiLane": false
-              },
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "hideZeros": false,
-                "mode": "single",
-                "sort": "none"
-              }
+              "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+              "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
             }
-          },
-          "version": "13.0.1+security-01"
+          }
         }
       }
     },
-    "panel-4": {
+
+    "panel-6": {
       "kind": "Panel",
       "spec": {
+        "id": 6,
+        "title": "Memory Utilization Over Time",
+        "description": "Memory utilization trend across the ECS Fargate service.",
+        "links": [],
         "data": {
           "kind": "QueryGroup",
           "spec": {
@@ -414,29 +477,34 @@
                 "kind": "PanelQuery",
                 "spec": {
                   "hidden": false,
+                  "refId": "A",
                   "query": {
-                    "datasource": {
-                      "name": "cfmmo6p7r7f9ce"
-                    },
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
                     "group": "cloudwatch",
                     "kind": "DataQuery",
+                    "version": "v0",
                     "spec": {
+                      "namespace": "AWS/ECS",
+                      "metricName": "MemoryUtilization",
                       "dimensions": {
                         "ClusterName": "ecs-project-cluster",
                         "ServiceName": "ecs-project-service"
                       },
-                      "label": "",
-                      "metricEditorMode": 0,
-                      "metricName": "RunningTaskCount",
-                      "metricQueryType": 0,
-                      "namespace": "ECS/ContainerInsights",
+                      "statistic": "Average",
                       "queryMode": "Metrics",
-                      "region": "default",
-                      "statistic": "Maximum"
-                    },
-                    "version": "v0"
-                  },
-                  "refId": "A"
+                      "region": "us-east-1",
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "Memory %",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "period": "",
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
                 }
               }
             ],
@@ -444,54 +512,351 @@
             "transformations": []
           }
         },
-        "description": "",
-        "id": 4,
-        "links": [],
-        "title": " Running Task Count",
         "vizConfig": {
-          "group": "stat",
+          "group": "timeseries",
           "kind": "VizConfig",
+          "version": "13.0.1+security-01",
           "spec": {
             "fieldConfig": {
               "defaults": {
-                "color": {
-                  "mode": "thresholds"
+                "color": { "fixedColor": "purple", "mode": "fixed" },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineInterpolation": "smooth",
+                  "lineWidth": 2,
+                  "fillOpacity": 15,
+                  "gradientMode": "opacity",
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "thresholdsStyle": { "mode": "off" },
+                  "axisBorderShow": false,
+                  "axisCenteredZero": false,
+                  "axisColorMode": "text",
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "barWidthFactor": 0.6,
+                  "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                  "insertNulls": false,
+                  "pointSize": 5,
+                  "scaleDistribution": { "type": "linear" },
+                  "showValues": false,
+                  "stacking": { "group": "A", "mode": "none" }
                 },
                 "thresholds": {
                   "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": 0
-                    }
-                  ]
-                }
+                  "steps": [{ "color": "green", "value": 0 }]
+                },
+                "unit": "percent",
+                "min": 0,
+                "max": 100
               },
               "overrides": []
             },
             "options": {
-              "colorMode": "value",
-              "graphMode": "area",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "percentChangeColorMode": "standard",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "showPercentChange": false,
-              "textMode": "auto",
-              "wideLayout": true
+              "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+              "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
             }
-          },
-          "version": "13.0.1+security-01"
+          }
+        }
+      }
+    },
+
+    "panel-7": {
+      "kind": "Panel",
+      "spec": {
+        "id": 7,
+        "title": "ALB Request Count (5m)",
+        "description": "Total number of HTTP requests processed by the ALB per 5-minute window.",
+        "links": [],
+        "data": {
+          "kind": "QueryGroup",
+          "spec": {
+            "queries": [
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "refId": "A",
+                  "query": {
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
+                    "group": "cloudwatch",
+                    "kind": "DataQuery",
+                    "version": "v0",
+                    "spec": {
+                      "namespace": "AWS/ApplicationELB",
+                      "metricName": "RequestCount",
+                      "dimensions": {
+                        "LoadBalancer": "app/ecs-project-alb/e2a708c5818b9d3a"
+                      },
+                      "statistic": "Sum",
+                      "period": "5m",
+                      "queryMode": "Metrics",
+                      "region": "us-east-1",
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "Requests",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "queryOptions": {},
+            "transformations": []
+          }
+        },
+        "vizConfig": {
+          "group": "timeseries",
+          "kind": "VizConfig",
+          "version": "13.0.1+security-01",
+          "spec": {
+            "fieldConfig": {
+              "defaults": {
+                "color": { "fixedColor": "blue", "mode": "fixed" },
+                "custom": {
+                  "drawStyle": "bars",
+                  "lineWidth": 1,
+                  "fillOpacity": 80,
+                  "gradientMode": "none",
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "thresholdsStyle": { "mode": "off" },
+                  "axisBorderShow": false,
+                  "axisCenteredZero": false,
+                  "axisColorMode": "text",
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "barWidthFactor": 0.6,
+                  "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                  "insertNulls": false,
+                  "lineInterpolation": "linear",
+                  "pointSize": 5,
+                  "scaleDistribution": { "type": "linear" },
+                  "showValues": false,
+                  "stacking": { "group": "A", "mode": "none" }
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [{ "color": "green", "value": 0 }]
+                },
+                "unit": "short",
+                "min": 0
+              },
+              "overrides": []
+            },
+            "options": {
+              "legend": { "calcs": ["sum", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+              "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+            }
+          }
+        }
+      }
+    },
+
+    "panel-8": {
+      "kind": "Panel",
+      "spec": {
+        "id": 8,
+        "title": "ALB HTTP 5xx Errors",
+        "description": "Server-side errors returned by the ALB. Any non-zero value indicates an application or infrastructure problem.",
+        "links": [],
+        "data": {
+          "kind": "QueryGroup",
+          "spec": {
+            "queries": [
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "refId": "A",
+                  "query": {
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
+                    "group": "cloudwatch",
+                    "kind": "DataQuery",
+                    "version": "v0",
+                    "spec": {
+                      "namespace": "AWS/ApplicationELB",
+                      "metricName": "HTTPCode_ELB_5XX_Count",
+                      "dimensions": {
+                        "LoadBalancer": "app/ecs-project-alb/e2a708c5818b9d3a"
+                      },
+                      "statistic": "Sum",
+                      "period": "5m",
+                      "queryMode": "Metrics",
+                      "region": "us-east-1",
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "5xx Errors",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "queryOptions": {},
+            "transformations": []
+          }
+        },
+        "vizConfig": {
+          "group": "timeseries",
+          "kind": "VizConfig",
+          "version": "13.0.1+security-01",
+          "spec": {
+            "fieldConfig": {
+              "defaults": {
+                "color": { "fixedColor": "red", "mode": "fixed" },
+                "custom": {
+                  "drawStyle": "bars",
+                  "lineWidth": 1,
+                  "fillOpacity": 80,
+                  "gradientMode": "none",
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "thresholdsStyle": { "mode": "off" },
+                  "axisBorderShow": false,
+                  "axisCenteredZero": false,
+                  "axisColorMode": "text",
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "barWidthFactor": 0.6,
+                  "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                  "insertNulls": false,
+                  "lineInterpolation": "linear",
+                  "pointSize": 5,
+                  "scaleDistribution": { "type": "linear" },
+                  "showValues": false,
+                  "stacking": { "group": "A", "mode": "none" }
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [{ "color": "green", "value": 0 }]
+                },
+                "unit": "short",
+                "min": 0
+              },
+              "overrides": []
+            },
+            "options": {
+              "legend": { "calcs": ["sum", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+              "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+            }
+          }
+        }
+      }
+    },
+
+    "panel-9": {
+      "kind": "Panel",
+      "spec": {
+        "id": 9,
+        "title": "ALB Target Response Time (p99)",
+        "description": "99th percentile latency from the ALB to the ECS Fargate target. Measures how fast requests are served end-to-end.",
+        "links": [],
+        "data": {
+          "kind": "QueryGroup",
+          "spec": {
+            "queries": [
+              {
+                "kind": "PanelQuery",
+                "spec": {
+                  "hidden": false,
+                  "refId": "A",
+                  "query": {
+                    "datasource": { "name": "cfmmo6p7r7f9ce" },
+                    "group": "cloudwatch",
+                    "kind": "DataQuery",
+                    "version": "v0",
+                    "spec": {
+                      "namespace": "AWS/ApplicationELB",
+                      "metricName": "TargetResponseTime",
+                      "dimensions": {
+                        "LoadBalancer": "app/ecs-project-alb/e2a708c5818b9d3a"
+                      },
+                      "statistic": "p99",
+                      "period": "5m",
+                      "queryMode": "Metrics",
+                      "region": "us-east-1",
+                      "metricEditorMode": 0,
+                      "metricQueryType": 0,
+                      "label": "Latency p99",
+                      "expression": "",
+                      "id": "",
+                      "logGroups": [],
+                      "matchExact": false,
+                      "queryLanguage": "CWLI",
+                      "sqlExpression": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "queryOptions": {},
+            "transformations": []
+          }
+        },
+        "vizConfig": {
+          "group": "timeseries",
+          "kind": "VizConfig",
+          "version": "13.0.1+security-01",
+          "spec": {
+            "fieldConfig": {
+              "defaults": {
+                "color": { "fixedColor": "orange", "mode": "fixed" },
+                "custom": {
+                  "drawStyle": "line",
+                  "lineInterpolation": "smooth",
+                  "lineWidth": 2,
+                  "fillOpacity": 10,
+                  "gradientMode": "opacity",
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "thresholdsStyle": { "mode": "off" },
+                  "axisBorderShow": false,
+                  "axisCenteredZero": false,
+                  "axisColorMode": "text",
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "barWidthFactor": 0.6,
+                  "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                  "insertNulls": false,
+                  "pointSize": 5,
+                  "scaleDistribution": { "type": "linear" },
+                  "showValues": false,
+                  "stacking": { "group": "A", "mode": "none" }
+                },
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [{ "color": "green", "value": 0 }]
+                },
+                "unit": "s",
+                "min": 0
+              },
+              "overrides": []
+            },
+            "options": {
+              "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+              "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+            }
+          }
         }
       }
     }
   },
+
   "layout": {
     "kind": "GridLayout",
     "spec": {
@@ -499,90 +864,85 @@
         {
           "kind": "GridLayoutItem",
           "spec": {
-            "element": {
-              "kind": "ElementReference",
-              "name": "panel-1"
-            },
-            "height": 8,
-            "width": 12,
-            "x": 0,
-            "y": 0
+            "element": { "kind": "ElementReference", "name": "panel-1" },
+            "x": 0, "y": 0, "width": 6, "height": 4
           }
         },
         {
           "kind": "GridLayoutItem",
           "spec": {
-            "element": {
-              "kind": "ElementReference",
-              "name": "panel-2"
-            },
-            "height": 8,
-            "width": 12,
-            "x": 12,
-            "y": 0
+            "element": { "kind": "ElementReference", "name": "panel-2" },
+            "x": 6, "y": 0, "width": 6, "height": 4
           }
         },
         {
           "kind": "GridLayoutItem",
           "spec": {
-            "element": {
-              "kind": "ElementReference",
-              "name": "panel-3"
-            },
-            "height": 8,
-            "width": 12,
-            "x": 0,
-            "y": 8
+            "element": { "kind": "ElementReference", "name": "panel-3" },
+            "x": 12, "y": 0, "width": 6, "height": 4
           }
         },
         {
           "kind": "GridLayoutItem",
           "spec": {
-            "element": {
-              "kind": "ElementReference",
-              "name": "panel-4"
-            },
-            "height": 8,
-            "width": 12,
-            "x": 12,
-            "y": 8
+            "element": { "kind": "ElementReference", "name": "panel-4" },
+            "x": 18, "y": 0, "width": 6, "height": 4
+          }
+        },
+        {
+          "kind": "GridLayoutItem",
+          "spec": {
+            "element": { "kind": "ElementReference", "name": "panel-5" },
+            "x": 0, "y": 4, "width": 12, "height": 8
+          }
+        },
+        {
+          "kind": "GridLayoutItem",
+          "spec": {
+            "element": { "kind": "ElementReference", "name": "panel-6" },
+            "x": 12, "y": 4, "width": 12, "height": 8
+          }
+        },
+        {
+          "kind": "GridLayoutItem",
+          "spec": {
+            "element": { "kind": "ElementReference", "name": "panel-7" },
+            "x": 0, "y": 12, "width": 8, "height": 8
+          }
+        },
+        {
+          "kind": "GridLayoutItem",
+          "spec": {
+            "element": { "kind": "ElementReference", "name": "panel-8" },
+            "x": 8, "y": 12, "width": 8, "height": 8
+          }
+        },
+        {
+          "kind": "GridLayoutItem",
+          "spec": {
+            "element": { "kind": "ElementReference", "name": "panel-9" },
+            "x": 16, "y": 12, "width": 8, "height": 8
           }
         }
       ]
     }
   },
+
   "links": [],
   "liveNow": false,
   "preferences": {
-    "layout": {
-      "kind": "GridLayout",
-      "spec": {
-        "items": []
-      }
-    }
+    "layout": { "kind": "GridLayout", "spec": { "items": [] } }
   },
   "preload": false,
-  "tags": [],
+  "tags": ["ecs", "fargate", "devops", "aws"],
   "timeSettings": {
-    "autoRefresh": "",
-    "autoRefreshIntervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ],
+    "autoRefresh": "1m",
+    "autoRefreshIntervals": ["30s", "1m", "5m", "15m", "30m", "1h"],
     "fiscalYearStartMonth": 0,
-    "from": "2026-05-20T13:41:30.000Z",
+    "from": "now-1h",
     "hideTimepicker": false,
     "timezone": "browser",
-    "to": "2026-05-20T13:46:30.000Z"
+    "to": "now"
   },
-  "title": "DevOps Toolbox - Application Performance (ECS Fargate)",
-  "variables": []
+  "title": "DevOps Toolbox - ECS Fargate Performance"
 }

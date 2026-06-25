@@ -3,7 +3,7 @@
 This repository contains the code and infrastructure configuration to deploy a stateless FastAPI web application (DevOps Toolbox) to AWS ECS Fargate using a modular Terraform setup and a self-hosted Jenkins CI/CD pipeline.
 
 <p align="center">
-  <img src="./docs/architecture.svg" alt="ECS Fargate Deployment Architecture" width="100%"/>
+  <img src="./docs/architecture.png" alt="ECS Fargate Deployment Architecture" width="100%"/>
 </p>
 
 ## System Architecture
@@ -39,7 +39,7 @@ This repository contains the code and infrastructure configuration to deploy a s
 │   ├── bootstrap-backend.sh  # Sets up remote state S3 bucket & DynamoDB table
 │   └── setup-jenkins.sh      # Installs Jenkins, Docker, Trivy, CLI, Terraform & Grafana
 ├── docs/                     # Documentation and architecture diagrams
-│   ├── architecture.svg      # Diagram of the ECS Fargate deployment
+│   ├── architecture.png      # Architecture diagram of the ECS Fargate deployment
 │   └── dashboard.png         # Example CloudWatch/Grafana dashboard view
 └── monitoring/               # Observability configurations
     └── grafana-dashboard.json# Pre-configured Grafana dashboard template
