@@ -6,12 +6,16 @@
 ![Jenkins](https://img.shields.io/badge/jenkins-%232C5263.svg?style=for-the-badge&logo=jenkins&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+
 A complete, modern DevOps project demonstrating:
+
 - **Infrastructure as Code**: Modular Terraform setup with remote state locking.
 - **Serverless Compute**: AWS ECS Fargate with target-tracking auto-scaling.
 - **CI/CD**: Fully automated Jenkins pipeline.
 - **DevSecOps**: Trivy filesystem and container image scanning.
 - **Networking**: Custom VPC, Application Load Balancer, and optional ACM HTTPS termination.
+
+---
 
 <p align="center">
   <img src="./docs/architecture.png" alt="ECS Fargate Deployment Architecture" width="100%"/>
