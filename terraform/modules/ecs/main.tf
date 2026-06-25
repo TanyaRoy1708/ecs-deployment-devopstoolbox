@@ -62,7 +62,7 @@ resource "aws_ecs_service" "app" {
   name            = "${var.project}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = 1
+  desired_count   = 2
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -96,7 +96,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
 
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 4
-  min_capacity       = 1
+  min_capacity       = 2
   resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.app.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
