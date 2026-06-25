@@ -1,5 +1,11 @@
 # DevOps Toolbox: AWS ECS Fargate Deployment
 
+![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![Jenkins](https://img.shields.io/badge/jenkins-%232C5263.svg?style=for-the-badge&logo=jenkins&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 A complete, modern DevOps project demonstrating:
 - **Infrastructure as Code**: Modular Terraform setup with remote state locking.
 - **Serverless Compute**: AWS ECS Fargate with target-tracking auto-scaling.
@@ -49,6 +55,17 @@ A complete, modern DevOps project demonstrating:
 └── monitoring/               # Observability configurations
     └── grafana-dashboard.json# Pre-configured Grafana dashboard template
 ```
+
+## Local Development (Docker Compose)
+
+You can easily run the application locally without deploying it to AWS. 
+
+1. Ensure you have Docker and Docker Compose installed.
+2. From the root of the repository, run:
+   ```bash
+   docker-compose up --build
+   ```
+3. The application will be available at `http://localhost:8000`. You can test the health endpoint at `http://localhost:8000/health`.
 
 ---
 

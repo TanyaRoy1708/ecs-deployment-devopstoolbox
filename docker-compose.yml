@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  devops-toolbox-app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: devops-toolbox-app
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
