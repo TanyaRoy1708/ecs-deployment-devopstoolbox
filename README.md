@@ -1,6 +1,11 @@
-# AWS ECS Fargate Deployment with Jenkins CI/CD
+# DevOps Toolbox: AWS ECS Fargate Deployment
 
-This repository contains the code and infrastructure configuration to deploy a stateless FastAPI web application (DevOps Toolbox) to AWS ECS Fargate using a modular Terraform setup and a self-hosted Jenkins CI/CD pipeline.
+A complete, modern DevOps project demonstrating:
+- **Infrastructure as Code**: Modular Terraform setup with remote state locking.
+- **Serverless Compute**: AWS ECS Fargate with target-tracking auto-scaling.
+- **CI/CD**: Fully automated Jenkins pipeline.
+- **DevSecOps**: Trivy filesystem and container image scanning.
+- **Networking**: Custom VPC, Application Load Balancer, and optional ACM HTTPS termination.
 
 <p align="center">
   <img src="./docs/architecture.png" alt="ECS Fargate Deployment Architecture" width="100%"/>
