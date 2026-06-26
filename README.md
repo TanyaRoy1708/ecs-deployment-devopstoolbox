@@ -1,35 +1,68 @@
-# DevOps Toolbox: AWS ECS Fargate Deployment
+# 🚀 DevOps Toolbox: AWS ECS Fargate Deployment
 
-![ECS](https://img.shields.io/badge/ecs-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
-![Jenkins](https://img.shields.io/badge/jenkins-%232C5263.svg?style=for-the-badge&logo=jenkins&logoColor=white)
+![ECS](https://img.shields.io/badge/Amazon_ECS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
+![Fargate](https://img.shields.io/badge/AWS_Fargate-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![Jenkins](https://img.shields.io/badge/Jenkins-%232C5263.svg?style=for-the-badge&logo=jenkins&logoColor=white)
+![Trivy](https://img.shields.io/badge/Trivy-blue?style=for-the-badge)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
-A complete, modern DevOps project demonstrating:
+Welcome to **DevOps Toolbox**, a fully automated, production-ready DevOps portfolio project. This repository demonstrates a complete CI/CD lifecycle, Infrastructure as Code (IaC), container orchestration, and DevSecOps best practices.
 
-- **Infrastructure as Code**: Modular Terraform setup with remote state locking.
-- **Serverless Compute**: AWS ECS Fargate with target-tracking auto-scaling.
-- **CI/CD**: Fully automated Jenkins pipeline.
-- **DevSecOps**: Trivy filesystem and container image scanning.
-- **Networking**: Custom VPC, Application Load Balancer, and optional ACM HTTPS termination.
+<p align="center">
+  <img src="./docs/screenshots/infrastructure/architecture.png" alt="ECS Fargate Deployment Architecture" width="100%"/>
+</p>
 
 ---
 
+## ✨ Highlights & Features
+
+- **Infrastructure as Code (IaC):** Modular Terraform setup provisioning a custom VPC, ALB, ECR, and ECS Fargate cluster with remote S3 state and DynamoDB locking.
+- **Serverless Compute:** Fully managed AWS ECS Fargate containers with target-tracking auto-scaling.
+- **Automated CI/CD:** A GitOps-driven Jenkins declarative pipeline (Build, Scan, Push, Deploy).
+- **DevSecOps:** Aqua Trivy integration scanning both the filesystem and built Docker images for vulnerabilities before deployment.
+- **Observability:** Custom Grafana dashboards visualizing CloudWatch metrics (CPU, Memory, 5xx Errors, ALB Request Count).
+- **Security:** Strict IAM roles, private Security Groups, and IAM Instance Profiles (No static AWS Keys!).
+
+---
+
+## 📸 Project Showcase
+
+### 1. The Application: DevOps Toolbox
+A custom Python FastAPI application containing various daily utilities for DevOps engineers.
 <p align="center">
-  <img src="./docs/architecture.png" alt="ECS Fargate Deployment Architecture" width="100%"/>
+  <img src="./docs/screenshots/app-view/app-home.png" alt="App Home" width="49%"/>
+  <img src="./docs/screenshots/app-view/app-cron.png" alt="Cron Explainer" width="49%"/>
+  <img src="./docs/screenshots/app-view/app-k8s.png" alt="K8s Manifest" width="49%"/>
+  <img src="./docs/screenshots/app-view/app-dockerfile.png" alt="Dockerfile Linter" width="49%"/>
 </p>
 
-## System Architecture
-* **Compute:** AWS ECS Fargate (stateless task container running on port 8000).
-* **Load Balancing:** Application Load Balancer (ALB) exposing port 80 and forwarding to Fargate.
-* **Networking:** Custom VPC with 2 public subnets in different Availability Zones.
-* **Security:** Public Security Group for the ALB, private Security Group restricting Fargate task access solely to the ALB.
-* **CI/CD:** Jenkins running on an EC2 instance, utilizing a Jenkinsfile declarative pipeline.
-* **Security Scanning:** Trivy scanning filesystem and built Docker images.
-* **Credentials:** IAM Instance Profile attached to Jenkins EC2 instance (eliminates static AWS Access Keys).
+### 2. CI/CD & DevSecOps
+Fully automated deployment pipeline with security vulnerability scanning blocking bad builds.
+<p align="center">
+  <img src="./docs/screenshots/pipeline/jenkins-pipeline.png" alt="Jenkins Pipeline" width="100%"/>
+</p>
+<p align="center">
+  <img src="./docs/screenshots/pipeline/jenkins-artifacts.png" alt="Jenkins Artifacts" width="49%"/>
+  <img src="./docs/screenshots/Artifacts/trivy-scan.png" alt="Trivy Scan" width="49%"/>
+</p>
+
+### 3. AWS Infrastructure & Container Registry
+Secure, serverless execution and private container registry.
+<p align="center">
+  <img src="./docs/screenshots/infrastructure/ecs-cluster.png" alt="ECS Cluster" width="49%"/>
+  <img src="./docs/screenshots/infrastructure/ecr-images.png" alt="ECR Images" width="49%"/>
+</p>
+
+### 4. Observability & Monitoring
+Real-time monitoring of application health and infrastructure performance.
+<p align="center">
+  <img src="./docs/screenshots/dashboard/grafana-dashboard.png" alt="Grafana Dashboard" width="100%"/>
+</p>
+
+---
 
 ## 💰 FinOps & Cost Estimation
 Cloud Financial Management (FinOps) was a core consideration for this project. The architecture was deliberately designed to be cost-effective for a portfolio/startup environment while maintaining a strong security posture.
@@ -47,130 +80,74 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 
 ---
 
-## Repository Structure
+## 📂 Repository Structure
 
 ```text
 ├── app/                      # FastAPI Python Application
 │   ├── main.py               # Entrypoint & /health route
 │   ├── Dockerfile            # Multi-stage production build (non-root user)
 │   ├── routers/              # Application routes
-│   ├── services/             # Core business logic
 │   └── tests/                # Pytest unit tests for application logic
 ├── terraform/                # Infrastructure as Code
 │   ├── main.tf               # Calls modules (VPC, ALB, ECS, ECR, Security)
 │   ├── backend.tf            # Configures S3 backend + DynamoDB state locking
 │   ├── iam.tf                # IAM Instance Profile for Jenkins server
-│   ├── outputs.tf            # Exports module outputs (e.g., ALB DNS, Cluster name)
-│   ├── variables.tf          # Input variable definitions
 │   └── modules/              # Individual modular components
 ├── jenkins/                  # Pipeline definition
 │   └── Jenkinsfile           # Declarative CI/CD pipeline
 ├── scripts/                  # Bootstrapping utility scripts
 │   ├── bootstrap-backend.sh  # Sets up remote state S3 bucket & DynamoDB table
+│   ├── cleanup-backend.sh    # Safely destroys S3 and DynamoDB remote state
 │   └── setup-jenkins.sh      # Installs Jenkins, Docker, Trivy, CLI, Terraform & Grafana
-├── docs/                     # Documentation and architecture diagrams
-│   ├── architecture.png      # Architecture diagram of the ECS Fargate deployment
-│   └── dashboard.png         # Example CloudWatch/Grafana dashboard view
+├── docs/                     # Documentation and showcase screenshots
 └── monitoring/               # Observability configurations
     └── grafana-dashboard.json# Pre-configured Grafana dashboard template
 ```
 
-## Local Development (Docker Compose)
-
-You can easily run the application locally without deploying it to AWS. 
-
-1. Ensure you have Docker and Docker Compose installed.
-2. From the root of the repository, run:
-   ```bash
-   docker-compose up --build
-   ```
-3. The application will be available at `http://localhost:8000`. You can test the health endpoint at `http://localhost:8000/health`.
-
 ---
 
-## Setup & Deployment Guide
+## 🚀 Setup & Deployment Guide
 
-### 1. Bootstrap S3 and DynamoDB for State Locking
+### 1. Local Development (Docker Compose)
+You can easily run the application locally without deploying it to AWS. 
+```bash
+docker-compose up --build
+```
+The application will be available at `http://localhost:8000`. Test the health endpoint at `http://localhost:8000/health`.
+
+### 2. Bootstrap S3 and DynamoDB for State Locking
 Before initializing Terraform, you must create the S3 bucket and DynamoDB table to store the state files and prevent concurrent executions.
-
-From your local machine with AWS credentials configured:
 ```bash
 ./scripts/bootstrap-backend.sh
 ```
-This will automatically generate a globally unique S3 bucket named `ecs-project-tfstate-<your-account-id>` and a DynamoDB lock table named `terraform-state-lock`.
 
-### 2. Update Configuration
-Rename or modify the variables in `terraform/environments/dev/terraform.tfvars` with your specific settings:
-```hcl
-project    = "ecs-project"
-aws_region = "us-east-1"
-vpc_cidr   = "10.0.0.0/16"
-app_port   = 8000
-```
-
-### 3. Deploy the Infrastructure
-Initialize and apply the Terraform configuration:
+### 3. Deploy the Infrastructure (Terraform)
+Rename or modify the variables in `terraform/environments/dev/terraform.tfvars`, then deploy:
 ```bash
 cd terraform
 terraform init
 terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
 ```
-*Note: This will provision the VPC, ECR, ALB, Security Groups, ECS Cluster, ECS Service, and create the IAM Role/Instance Profile (`Jenkins-EC2-Deployer-Profile`).*
 
 ### 4. Configure the Jenkins Server
-You can deploy and fully configure the Jenkins server in a zero-touch fashion using **EC2 User Data**:
-
-1. **Launch an EC2 Instance:**
-   * Choose an Ubuntu 22.04 or 24.04 AMI.
-   * Choose `t2.micro` or `t3.micro`.
-   * **Network Settings (Security Group):** Click **Select existing security group** and choose the `ecs-project-jenkins-sg` (provisioned by Terraform, allows ports 22, 8080, and 3000).
-2. **Configure IAM Role & User Data:**
-   * Under **Advanced Details**, set the **IAM Instance Profile** to `Jenkins-EC2-Deployer-Profile` (created during step 3).
-   * Scroll down to the **User Data** field and paste the contents of `scripts/setup-jenkins.sh`.
-3. **Retrieve Credentials:**
-   * After the instance starts, it will take about 2–3 minutes to automatically install Jenkins, Docker, Trivy, AWS CLI, Terraform, and Grafana.
-   * Simply SSH into the instance and run the following command to retrieve your initial Jenkins admin password:
-     ```bash
-     sudo cat /var/lib/jenkins/secrets/initialAdminPassword
-     ```
-   * *Note: You can monitor the progress of the automated user-data installation by tailing the cloud-init log:*
-     ```bash
-     tail -f /var/log/cloud-init-output.log
-     ```
+Deploy the Jenkins server in a zero-touch fashion using **EC2 User Data**:
+1. Launch an EC2 Instance (`t3.micro`, Ubuntu 24.04).
+2. Attach the `ecs-project-jenkins-sg` Security Group and the `Jenkins-EC2-Deployer-Profile` IAM Role.
+3. Paste the contents of `scripts/setup-jenkins.sh` into the **User Data** field.
+4. Once booted, retrieve the initial admin password:
+   ```bash
+   sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+   ```
 
 ### 5. Create & Run the Jenkins Pipeline
-This pipeline is fully automated and triggered by Git pushes/pull requests. It scans and builds the application code and deploys it to the pre-existing ECS Fargate infrastructure.
+1. Create a new Pipeline job in Jenkins.
+2. Select **GitHub hook trigger for GITScm polling**.
+3. Point the pipeline to your fork of this repository (`*/main` branch, `jenkins/Jenkinsfile`).
+4. Add your AWS Account ID as a Global Secret Text credential named `aws-account-id`.
+5. Push code to GitHub to trigger the automated security scanning and deployment to ECS Fargate!
 
-1. Create a new **Pipeline** job in Jenkins named `devops-toolbox-app`.
-2. Under **Build Triggers**, select **GitHub hook trigger for GITScm polling**.
-3. In the **Pipeline** section, configure:
-   * **Definition:** Pipeline script from SCM
-   * **SCM:** Git
-   * **Repository URL:** Your GitHub fork repository URL
-   * **Branch Specifier:** `*/main`
-   * **Script Path:** `jenkins/Jenkinsfile`
-4. **Configure Jenkins Credentials**:
-   * Go to **Manage Jenkins** > **Credentials** > **System** > **Global credentials**.
-   * Add a new credential of type **Secret text**.
-   * Set **ID** to `aws-account-id` and set the **Secret** to your 12-digit AWS Account ID (needed by the pipeline to construct the ECR registry URI).
-5. **Set up GitHub Webhook**: Add a webhook in your repository settings pointing to `http://<jenkins-ec2-public-ip>:8080/github-webhook/`.
-6. **Deploy**: Push a commit or click **Build Now** in Jenkins to trigger the automated security scanning and deployment to ECS Fargate.
-
----
-
-## Monitoring & Alerting Setup (Grafana & CloudWatch)
-
-### Grafana Dashboards
-Grafana is automatically installed on port 3000 by the setup script.
-1. Open `http://<your-ec2-public-ip>:3000` (default credentials: `admin` / `admin`).
-2. Add a new Data Source: Select **CloudWatch**.
-3. Set Authentication Provider to **EC2 IAM Role** and select region `us-east-1`.
-4. Create a new dashboard querying the `ECS/ContainerInsights` namespace for your CPU and Memory metrics.
-
-### Threshold-Based Alerting (CloudWatch Alarm)
-The Terraform ECS module automatically provisions an active threshold-based CloudWatch metric alarm (`ecs-project-cpu-high`).
-* **Metric Monitored:** `CPUUtilization` (Average) under `AWS/ECS`.
-* **Alarm Condition:** Triggers if average CPU utilization exceeds `80%` over 2 consecutive evaluation periods of 1 minute (`period = 60`, `evaluation_periods = 2`).
-
-
-
+### 6. Monitoring & Alerting (Grafana)
+1. Open Grafana at `http://<ec2-public-ip>:3000` (default: `admin`/`admin`).
+2. Add a **CloudWatch** Data Source using the EC2 IAM Role authentication.
+3. Import the `monitoring/grafana-dashboard.json` file.
+4. Enjoy real-time observability of your container metrics!
