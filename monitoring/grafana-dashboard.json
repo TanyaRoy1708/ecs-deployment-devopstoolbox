@@ -871,17 +871,17 @@
                   "axisPlacement": "auto",
                   "barAlignment": 0,
                   "barWidthFactor": 0.6,
-                  "drawStyle": "bars",
-                  "fillOpacity": 80,
-                  "gradientMode": "none",
+                  "drawStyle": "line",
+                  "fillOpacity": 15,
+                  "gradientMode": "opacity",
                   "hideFrom": {
                     "legend": false,
                     "tooltip": false,
                     "viz": false
                   },
                   "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
+                  "lineInterpolation": "stepBefore",
+                  "lineWidth": 2,
                   "pointSize": 5,
                   "scaleDistribution": {
                     "type": "linear"
