@@ -33,14 +33,6 @@ async def health():
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    stats = {
-        "cron": 0,
-        "cidr": 0,
-        "k8s": 0,
-        "dockerfile": 0
-    }
-    
     return templates.TemplateResponse(request, "index.html", {
-        "request": request, 
-        "stats": stats
+        "request": request
     })
