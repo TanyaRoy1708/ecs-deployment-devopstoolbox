@@ -1,4 +1,4 @@
-# 🚀 DevOps Toolbox: AWS ECS Fargate Deployment
+# DevOps Toolbox: AWS ECS Fargate Deployment
 
 ![ECS](https://img.shields.io/badge/Amazon_ECS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Fargate](https://img.shields.io/badge/AWS_Fargate-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
@@ -17,7 +17,7 @@ Welcome to **DevOps Toolbox**, a fully automated, production-ready DevOps portfo
 
 ---
 
-## ✨ Highlights & Features
+## Highlights & Features
 
 - **Infrastructure as Code (IaC):** Modular Terraform setup provisioning a custom VPC, ALB, ECR, and ECS Fargate cluster with remote S3 state and DynamoDB locking.
 - **Serverless Compute:** Fully managed AWS ECS Fargate containers with target-tracking auto-scaling.
@@ -28,7 +28,7 @@ Welcome to **DevOps Toolbox**, a fully automated, production-ready DevOps portfo
 
 ---
 
-## 📸 Project Showcase
+## Project Showcase
 
 ### 1. The Application: DevOps Toolbox
 A custom Python FastAPI application containing various daily utilities for DevOps engineers.
@@ -64,7 +64,7 @@ Real-time monitoring of application health and infrastructure performance.
 
 ---
 
-## 💰 FinOps & Cost Estimation
+## FinOps & Cost Estimation
 Cloud Financial Management (FinOps) was a core consideration for this project. The architecture was deliberately designed to be cost-effective for a portfolio/startup environment while maintaining a strong security posture.
 
 | Resource | Specification | Estimated Cost (Monthly) |
@@ -80,7 +80,7 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```text
 ├── app/                      # FastAPI Python Application
@@ -106,7 +106,7 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 
 ---
 
-## 🚀 Setup & Deployment Guide
+## Setup & Deployment Guide
 
 ### 1. Local Development (Docker Compose)
 You can easily run the application locally without deploying it to AWS. 
