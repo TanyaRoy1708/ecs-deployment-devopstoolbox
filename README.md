@@ -71,9 +71,9 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 |----------|---------------|--------------------------|
 | **Application Load Balancer** | 1 ALB (us-east-1) | ~$16.00 |
 | **ECS Fargate** | 2 Tasks (0.25 vCPU, 0.5 GB) | ~$16.00 |
-| **Jenkins Server** | 1 EC2 (t3.micro) | ~$7.50 |
+| **Jenkins Server** | 1 EC2 (t3.medium) | ~$30.40 |
 | **Storage & State** | S3 & DynamoDB | ~$1.00 |
-| **Total Estimated Cost** | | **~$40.50 / month** |
+| **Total Estimated Cost** | | **~$63.40 / month** |
 
 > **Architectural Trade-off (Cost vs. Isolation):** 
 > By utilizing a **Public Subnet architecture** restricted by tight **Security Groups** (tasks only accept traffic from the ALB), this design avoids the need for AWS NAT Gateways and VPC Endpoints. This deliberate architectural decision saves approximately **$55 to $90 per month** in baseline networking costs, achieving a secure environment without the enterprise price tag.
@@ -140,7 +140,7 @@ terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
 
 ### 4. Configure the Jenkins Server
 Deploy the Jenkins server in a zero-touch fashion using **EC2 User Data**:
-1. Launch an EC2 Instance (`t3.micro`, Ubuntu 24.04).
+1. Launch an EC2 Instance (`t3.medium`, Ubuntu 24.04). *(Note: A t3.medium is required to provide enough RAM for Jenkins, Docker builds, Trivy scans, and Grafana to run simultaneously without OOM crashes)*.
 2. Attach the `ecs-project-jenkins-sg` Security Group and the `Jenkins-EC2-Deployer-Profile` IAM Role.
 3. Paste the contents of `scripts/setup-jenkins.sh` into the **User Data** field.
 4. Once booted, retrieve the initial admin password:
