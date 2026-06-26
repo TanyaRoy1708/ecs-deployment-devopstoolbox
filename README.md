@@ -86,7 +86,10 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 ├── app/                      # FastAPI Python Application
 │   ├── main.py               # Entrypoint & /health route
 │   ├── Dockerfile            # Multi-stage production build (non-root user)
-│   ├── routers/              # Application routes
+│   ├── routers/              # Application routes & API endpoints
+│   ├── services/             # Core business logic
+│   ├── static/               # CSS styles and static assets
+│   ├── templates/            # HTML Jinja2 templates (Frontend)
 │   └── tests/                # Pytest unit tests for application logic
 ├── terraform/                # Infrastructure as Code
 │   ├── main.tf               # Calls modules (VPC, ALB, ECS, ECR, Security)
@@ -100,6 +103,12 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 │   ├── cleanup-backend.sh    # Safely destroys S3 and DynamoDB remote state
 │   └── setup-jenkins.sh      # Installs Jenkins, Docker, Trivy, CLI, Terraform & Grafana
 ├── docs/                     # Documentation and showcase screenshots
+│   └── screenshots/          # Categorized application and infrastructure screenshots
+│       ├── app-view/         # App UI screenshots
+│       ├── Artifacts/        # Trivy scans, build outputs
+│       ├── dashboard/        # Grafana dashboards
+│       ├── infrastructure/   # ECS, ECR, Architecture diagram
+│       └── pipeline/         # Jenkins pipelines
 └── monitoring/               # Observability configurations
     └── grafana-dashboard.json# Pre-configured Grafana dashboard template
 ```
