@@ -27,11 +27,31 @@ pipeline {
             }
         }
 
+        stage('Run Unit Tests') {
+            steps {
+                dir('app') {
+                    sh '''
+                        docker run --rm \
+                            -e PYTHONDONTWRITEBYTECODE=1 \
+                            -v "$PWD":/app \
+                            -w /app \
+                            python:3.11-slim \
+                            sh -c "pip install --quiet -r requirements.txt && python -m pytest tests/ -v --tb=short 2>&1 | tee test-results.txt"
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'app/test-results.txt', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Trivy FS Scan') {
             steps {
                 dir('app') {
                     sh '''
-                        trivy fs --exit-code 0 \
+                        trivy fs --exit-code 1 \
                                  --ignore-unfixed \
                                  --severity HIGH,CRITICAL \
                                  --format table \
@@ -59,7 +79,7 @@ pipeline {
         stage('Trivy Image Scan') {
             steps {
                 sh '''
-                    trivy image --exit-code 0 \
+                    trivy image --exit-code 1 \
                                 --ignore-unfixed \
                                 --severity HIGH,CRITICAL \
                                 --format table \

@@ -75,6 +75,8 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 | **Storage & State** | S3 & DynamoDB | ~$1.00 |
 | **Total Estimated Cost** | | **~$63.40 / month** |
 
+> **Note on Pricing:** These estimates are based on the `us-east-1` region. AWS pricing varies by region and is subject to change over time. Your actual costs may differ based on usage and current rates.
+
 > **Architectural Trade-off (Cost vs. Isolation):** 
 > By utilizing a **Public Subnet architecture** restricted by tight **Security Groups** (tasks only accept traffic from the ALB), this design avoids the need for AWS NAT Gateways and VPC Endpoints. This deliberate architectural decision saves approximately **$55 to $90 per month** in baseline networking costs, achieving a secure environment without the enterprise price tag.
 
