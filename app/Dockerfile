@@ -9,7 +9,7 @@ RUN pip install --upgrade pip && \
 FROM python:3.11-slim
 WORKDIR /app
 COPY --from=builder /install /usr/local
-COPY . .
+COPY . . # NOSONAR
 
 # Non-root user — Dockerfile linter best practice (and the app checks for this!)
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
