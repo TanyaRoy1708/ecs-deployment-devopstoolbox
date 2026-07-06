@@ -5,6 +5,8 @@
 ![Terraform](https://img.shields.io/badge/Terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Jenkins](https://img.shields.io/badge/Jenkins-%232C5263.svg?style=for-the-badge&logo=jenkins&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
+![SonarCloud](https://img.shields.io/badge/SonarCloud-F3702A?style=for-the-badge&logo=sonarcloud&logoColor=white)
 ![Trivy](https://img.shields.io/badge/Trivy-blue?style=for-the-badge)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
 ![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
@@ -22,7 +24,7 @@ Welcome to **DevOps Toolbox**, a fully automated, production-ready DevOps portfo
 - **Infrastructure as Code (IaC):** Modular Terraform setup provisioning a custom VPC, ALB, ECR, and ECS Fargate cluster with remote S3 state and DynamoDB locking.
 - **Serverless Compute:** Fully managed AWS ECS Fargate containers with target-tracking auto-scaling.
 - **Automated CI/CD:** A GitOps-driven Jenkins declarative pipeline (Build, Scan, Push, Deploy).
-- **DevSecOps:** Aqua Trivy integration scanning both the filesystem and built Docker images for vulnerabilities before deployment.
+- **DevSecOps:** Multi-layer security pipeline combining **SonarCloud** static analysis (SAST, code smells, coverage enforcement via Quality Gate) and **Aqua Trivy** vulnerability scanning of both the filesystem and built Docker images before deployment.
 - **Observability:** Custom Grafana dashboards visualizing CloudWatch metrics (CPU, Memory, 5xx Errors, ALB Request Count).
 - **Security:** Strict IAM roles, private Security Groups, and IAM Instance Profiles (No static AWS Keys!).
 
@@ -88,6 +90,7 @@ Cloud Financial Management (FinOps) was a core consideration for this project. T
 ├── app/                      # FastAPI Python Application
 │   ├── main.py               # Entrypoint & /health route
 │   ├── Dockerfile            # Multi-stage production build (non-root user)
+│   ├── sonar-project.properties # SonarCloud analysis configuration
 │   ├── routers/              # Application routes & API endpoints
 │   ├── services/             # Core business logic
 │   ├── static/               # CSS styles and static assets
@@ -149,6 +152,27 @@ Deploy the Jenkins server in a zero-touch fashion using **EC2 User Data**:
    ```bash
    sudo cat /var/lib/jenkins/secrets/initialAdminPassword
    ```
+
+### 4. Configure SonarCloud (Free — no server required)
+SonarCloud is the managed SaaS version of SonarQube. It is **free for public repositories** and requires no infrastructure.
+
+1. Sign up at [sonarcloud.io](https://sonarcloud.io) using your GitHub account.
+2. Create a new organization and import this repository.
+3. Note your **Organization Key** (shown in SonarCloud → My Account → Organizations).
+4. Generate a token: **My Account → Security → Generate Token** (type: Global Analysis Token).
+5. In `app/sonar-project.properties`, replace `<your-sonarcloud-org-key>` with your organization key.
+6. Add a **Webhook** in SonarCloud so Jenkins receives the Quality Gate result:
+   - Go to: SonarCloud → Your Project → Administration → Webhooks → Create
+   - Name: `Jenkins`
+   - URL: `http://<jenkins-ec2-ip>:8080/sonarqube-webhook/`
+7. In Jenkins, add the following credentials:
+   - **Secret text**, ID: `sonarcloud-token` — paste your SonarCloud token
+   - **Secret text**, ID: `sonarcloud-org-key` — paste your organization key
+8. In Jenkins → Manage Jenkins → System → **SonarQube servers**:
+   - Name: `SonarCloud` *(must match `withSonarQubeEnv('SonarCloud')` in Jenkinsfile)*
+   - Server URL: `https://sonarcloud.io`
+   - Server auth token: select `sonarcloud-token`
+9. In Jenkins → Manage Jenkins → Tools → **SonarQube Scanner**: Add scanner, enable auto-install.
 
 ### 5. Create & Run the Jenkins Pipeline
 1. Create a new Pipeline job in Jenkins.

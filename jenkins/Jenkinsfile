@@ -2,13 +2,16 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION      = 'us-east-1'
-        // This will be pulled from Jenkins credentials manager
-        AWS_ACCOUNT_ID  = credentials('aws-account-id')
-        IMAGE_TAG       = "${BUILD_NUMBER}"
-        ECS_CLUSTER     = 'ecs-project-cluster'
-        ECS_SERVICE     = 'ecs-project-service'
-        ECS_TASK_FAMILY = 'ecs-project-task'
+        AWS_REGION          = 'us-east-1'
+        // Pulled from Jenkins credentials manager
+        AWS_ACCOUNT_ID      = credentials('aws-account-id')
+        IMAGE_TAG           = "${BUILD_NUMBER}"
+        ECS_CLUSTER         = 'ecs-project-cluster'
+        ECS_SERVICE         = 'ecs-project-service'
+        ECS_TASK_FAMILY     = 'ecs-project-task'
+        // SonarCloud — store org key as a Jenkins credential or plain env var
+        SONAR_ORGANIZATION  = credentials('sonarcloud-org-key')
+        SONAR_PROJECT_KEY   = 'ecs-project'
     }
 
     stages {
@@ -27,7 +30,7 @@ pipeline {
             }
         }
 
-        stage('Run Unit Tests') {
+        stage('Run Unit Tests & Coverage') {
             steps {
                 dir('app') {
                     sh '''
@@ -36,13 +39,53 @@ pipeline {
                             -v "$PWD":/app \
                             -w /app \
                             python:3.11-slim \
-                            sh -c "pip install --quiet -r requirements.txt && python -m pytest tests/ -v --tb=short 2>&1 | tee test-results.txt"
+                            sh -c "pip install --quiet -r requirements.txt pytest-cov \
+                                   && python -m pytest tests/ -v --tb=short \
+                                      --junitxml=test-results.xml \
+                                      --cov=. --cov-report=xml:coverage.xml \
+                                      2>&1 | tee test-results.txt"
                     '''
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'app/test-results.txt', allowEmptyArchive: true
+                    // Publishes results to Jenkins 'Tests' tab
+                    junit allowEmptyResults: true, testResults: 'app/test-results.xml'
+                    archiveArtifacts artifacts: 'app/test-results.txt,app/coverage.xml', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('SonarCloud Analysis') {
+            steps {
+                dir('app') {
+                    // 'SonarCloud' must match the name in Jenkins → Manage Jenkins → System → SonarQube servers
+                    // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_TOKEN automatically from Jenkins config
+                    withSonarQubeEnv('SonarCloud') {
+                        sh """
+                            sonar-scanner \
+                                -Dsonar.organization=${SONAR_ORGANIZATION} \
+                                -Dsonar.host.url=https://sonarcloud.io \
+                                -Dsonar.branch.name=${env.BRANCH_NAME ?: 'main'} \
+                                -Dsonar.buildString=${BUILD_NUMBER}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                // Waits for SonarCloud webhook to post back the Quality Gate result
+                // Requires a webhook configured in SonarCloud project → Administration → Webhooks
+                // Webhook URL: http://<jenkins-ip>:8080/sonarqube-webhook/
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "Pipeline aborted: SonarCloud Quality Gate FAILED (status: ${qg.status}). Review at https://sonarcloud.io/project/overview?id=${SONAR_PROJECT_KEY}"
+                        }
+                    }
                 }
             }
         }
@@ -138,7 +181,7 @@ pipeline {
             echo "Deployment successful — Build #${BUILD_NUMBER}"
         }
         failure {
-            echo "Pipeline failed — check Trivy reports or ECS logs"
+            echo "Pipeline failed — check SonarCloud Quality Gate, Trivy reports, or ECS logs"
         }
         always {
             sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest || true"
