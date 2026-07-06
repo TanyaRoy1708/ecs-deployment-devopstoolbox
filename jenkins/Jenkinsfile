@@ -9,8 +9,7 @@ pipeline {
         ECS_CLUSTER         = 'ecs-project-cluster'
         ECS_SERVICE         = 'ecs-project-service'
         ECS_TASK_FAMILY     = 'ecs-project-task'
-        // SonarCloud — store org key as a Jenkins credential or plain env var
-        SONAR_ORGANIZATION  = credentials('sonarcloud-org-key')
+        // SonarCloud Project Key
         SONAR_PROJECT_KEY   = 'ecs-project'
     }
 
@@ -62,13 +61,17 @@ pipeline {
                     // 'SonarCloud' must match the name in Jenkins → Manage Jenkins → System → SonarQube servers
                     // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_TOKEN automatically from Jenkins config
                     withSonarQubeEnv('SonarCloud') {
-                        sh """
-                            sonar-scanner \
-                                -Dsonar.organization=${SONAR_ORGANIZATION} \
-                                -Dsonar.host.url=https://sonarcloud.io \
-                                -Dsonar.branch.name=${env.BRANCH_NAME ?: 'main'} \
-                                -Dsonar.buildString=${BUILD_NUMBER}
-                        """
+                        script {
+                            // Define the tool. IMPORTANT: 'sonar-scanner' must match the name you gave it in Jenkins Tools!
+                            def scannerHome = tool 'sonar-scanner'
+                            
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \\
+                                    -Dsonar.host.url=https://sonarcloud.io \\
+                                    -Dsonar.branch.name=${env.BRANCH_NAME ?: 'main'} \\
+                                    -Dsonar.buildString=${BUILD_NUMBER}
+                            """
+                        }
                     }
                 }
             }
