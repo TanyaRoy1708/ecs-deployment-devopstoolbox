@@ -35,8 +35,9 @@ Welcome to **DevOps Toolbox**, a fully automated, production-ready DevOps portfo
 ### 1. The Application: DevOps Toolbox
 A custom Python FastAPI application containing various daily utilities for DevOps engineers.
 <p align="center">
-  <img src="./docs/screenshots/app-view/app-home.png" alt="App Home" width="49%"/>
-  <img src="./docs/screenshots/app-view/app-cron.png" alt="Cron Explainer" width="49%"/>
+  <img src="./docs/screenshots/app-view/app-home.png" alt="App Home" width="32%"/>
+  <img src="./docs/screenshots/app-view/app-cron.png" alt="Cron Explainer" width="32%"/>
+  <img src="./docs/screenshots/app-view/app-cidr.png" alt="CIDR Calculator" width="32%"/>
   <img src="./docs/screenshots/app-view/app-k8s.png" alt="K8s Manifest" width="49%"/>
   <img src="./docs/screenshots/app-view/app-dockerfile.png" alt="Dockerfile Linter" width="49%"/>
 </p>
@@ -47,15 +48,16 @@ Fully automated deployment pipeline with security vulnerability scanning blockin
   <img src="./docs/screenshots/pipeline/jenkins-pipeline.png" alt="Jenkins Pipeline" width="100%"/>
 </p>
 <p align="center">
-  <img src="./docs/screenshots/pipeline/jenkins-artifacts.png" alt="Jenkins Artifacts" width="49%"/>
-  <img src="./docs/screenshots/Artifacts/trivy-scan.png" alt="Trivy Scan" width="49%"/>
+  <img src="./docs/screenshots/pipeline/jenkins-artifacts.png" alt="Jenkins Artifacts" width="32%"/>
+  <img src="./docs/screenshots/Artifacts/trivy-scan.png" alt="Trivy Scan" width="32%"/>
+  <img src="./docs/screenshots/Artifacts/sonar%20scan.png" alt="SonarCloud Scan" width="32%"/>
 </p>
 
 ### 3. AWS Infrastructure & Container Registry
 Secure, serverless execution and private container registry.
 <p align="center">
   <img src="./docs/screenshots/infrastructure/ecs-cluster.png" alt="ECS Cluster" width="49%"/>
-  <img src="./docs/screenshots/infrastructure/ecr-images.png" alt="ECR Images" width="49%"/>
+  <img src="./docs/screenshots/infrastructure/ecr-project.png" alt="ECR Images" width="49%"/>
 </p>
 
 ### 4. Observability & Monitoring
