@@ -74,21 +74,6 @@ pipeline {
             }
         }
 
-        stage('Quality Gate') {
-            steps {
-                // Waits for SonarCloud webhook to post back the Quality Gate result
-                // Requires a webhook configured in SonarCloud project → Administration → Webhooks
-                // Webhook URL: http://<jenkins-ip>:8080/sonarqube-webhook/
-                timeout(time: 5, unit: 'MINUTES') {
-                    script {
-                        def qg = waitForQualityGate()
-                        if (qg.status != 'OK') {
-                            error "Pipeline aborted: SonarCloud Quality Gate FAILED (status: ${qg.status}). Review at https://sonarcloud.io/project/overview?id=${SONAR_PROJECT_KEY}"
-                        }
-                    }
-                }
-            }
-        }
 
         stage('Trivy FS Scan') {
             steps {

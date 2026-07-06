@@ -24,7 +24,7 @@ Welcome to **DevOps Toolbox**, a fully automated, production-ready DevOps portfo
 - **Infrastructure as Code (IaC):** Modular Terraform setup provisioning a custom VPC, ALB, ECR, and ECS Fargate cluster with remote S3 state and DynamoDB locking.
 - **Serverless Compute:** Fully managed AWS ECS Fargate containers with target-tracking auto-scaling.
 - **Automated CI/CD:** A GitOps-driven Jenkins declarative pipeline (Build, Scan, Push, Deploy).
-- **DevSecOps:** Multi-layer security pipeline combining **SonarCloud** static analysis (SAST, code smells, coverage enforcement via Quality Gate) and **Aqua Trivy** vulnerability scanning of both the filesystem and built Docker images before deployment.
+- **DevSecOps:** Multi-layer security pipeline combining **SonarCloud** static analysis (async reporting for code quality) and **Aqua Trivy** vulnerability scanning (strict blocking for CVEs) before deployment.
 - **Observability:** Custom Grafana dashboards visualizing CloudWatch metrics (CPU, Memory, 5xx Errors, ALB Request Count).
 - **Security:** Strict IAM roles, private Security Groups, and IAM Instance Profiles (No static AWS Keys!).
 
@@ -161,18 +161,16 @@ SonarCloud is the managed SaaS version of SonarQube. It is **free for public rep
 3. Note your **Organization Key** (shown in SonarCloud → My Account → Organizations).
 4. Generate a token: **My Account → Security → Generate Token** (type: Global Analysis Token).
 5. In `app/sonar-project.properties`, replace `<your-sonarcloud-org-key>` with your organization key.
-6. Add a **Webhook** in SonarCloud so Jenkins receives the Quality Gate result:
-   - Go to: SonarCloud → Your Project → Administration → Webhooks → Create
-   - Name: `Jenkins`
-   - URL: `http://<jenkins-ec2-ip>:8080/sonarqube-webhook/`
-7. In Jenkins, add the following credentials:
+6. In Jenkins, add the following credentials:
    - **Secret text**, ID: `sonarcloud-token` — paste your SonarCloud token
    - **Secret text**, ID: `sonarcloud-org-key` — paste your organization key
-8. In Jenkins → Manage Jenkins → System → **SonarQube servers**:
+7. In Jenkins → Manage Jenkins → System → **SonarQube servers**:
    - Name: `SonarCloud` *(must match `withSonarQubeEnv('SonarCloud')` in Jenkinsfile)*
    - Server URL: `https://sonarcloud.io`
    - Server auth token: select `sonarcloud-token`
-9. In Jenkins → Manage Jenkins → Tools → **SonarQube Scanner**: Add scanner, enable auto-install.
+8. In Jenkins → Manage Jenkins → Tools → **SonarQube Scanner**: Add scanner, enable auto-install.
+
+> **Architecture Note:** Due to webhook limitations on the free SaaS tier, SonarCloud is configured to run asynchronously. It pushes metrics to the dashboard for review without breaking the build, while Trivy handles the strict blocking security checks.
 
 ### 5. Create & Run the Jenkins Pipeline
 1. Create a new Pipeline job in Jenkins.
