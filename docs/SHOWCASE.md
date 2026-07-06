@@ -150,7 +150,7 @@ flowchart TD
         subgraph VPC [Custom VPC]
             ALB[Application Load Balancer]:::aws
             
-            subgraph Private Subnets
+            subgraph Public Subnets [Public Subnets (Secured via SG)]
                 ECS[ECS Fargate Cluster]:::aws
                 Task1[App Task 1]:::aws
                 Task2[App Task 2]:::aws
