@@ -9,7 +9,7 @@ pipeline {
         ECS_CLUSTER         = 'ecs-project-cluster'
         ECS_SERVICE         = 'ecs-project-service'
         // SonarCloud Project Key
-        SONAR_PROJECT_KEY   = 'ecs-project'
+        SONAR_PROJECT_KEY   = 'TanyaRoy1708_ecs-deployment-devopstoolbox'
     }
 
     stages {
