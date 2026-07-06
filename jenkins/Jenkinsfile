@@ -38,7 +38,8 @@ pipeline {
                             -v "$PWD":/app \
                             -w /app \
                             python:3.11-slim \
-                            sh -c "pip install --quiet -r requirements.txt pytest-cov \
+                            sh -c "trap 'rm -rf .pytest_cache tests/__pycache__ __pycache__' EXIT; \
+                                   pip install --quiet -r requirements.txt pytest-cov \
                                    && python -m pytest tests/ -v --tb=short \
                                       --junitxml=test-results.xml \
                                       --cov=. --cov-report=xml:coverage.xml \
