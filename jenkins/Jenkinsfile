@@ -50,6 +50,12 @@ pipeline {
                     // Publishes results to Jenkins 'Tests' tab
                     junit allowEmptyResults: true, testResults: 'app/test-results.xml'
                     archiveArtifacts artifacts: 'app/test-results.txt,app/coverage.xml', allowEmptyArchive: true
+                    
+                    // Clean up root-owned cache folders created by Python inside Docker
+                    // We use an alpine container to safely delete them without permission errors
+                    dir('app') {
+                        sh 'docker run --rm -v "$PWD":/app -w /app alpine rm -rf .pytest_cache tests/__pycache__ __pycache__ || true'
+                    }
                 }
             }
         }
