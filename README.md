@@ -15,9 +15,79 @@ A production-grade DevOps portfolio project demonstrating a complete CI/CD lifec
 
 > 📸 **[View full project screenshots and visual walkthrough →](./docs/SHOWCASE.md)**
 
-<p align="center">
-  <img src="./docs/screenshots/infrastructure/architecture.png" alt="Architecture Diagram" width="100%"/>
-</p>
+```mermaid
+flowchart TD
+    %% Define Styles
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px,color:white;
+    classDef devops fill:#2C5263,stroke:#232F3E,stroke-width:2px,color:white;
+    classDef security fill:#F3702A,stroke:#232F3E,stroke-width:2px,color:white;
+    classDef user fill:#3670A0,stroke:#232F3E,stroke-width:2px,color:white;
+
+    %% Actors
+    Dev[Developer]:::user
+    EndUser[End User]:::user
+
+    %% Source Control
+    subgraph GitHub [GitHub Repository]
+        Code[(Source Code + Dockerfile)]
+    end
+
+    %% CI/CD Pipeline
+    subgraph Pipeline [Jenkins CI/CD Pipeline]
+        Build[Build & Unit Test]:::devops
+        Sonar[SonarCloud SAST]:::security
+        TrivyFS[Trivy FS Scan]:::security
+        DockerBuild[Docker Build]:::devops
+        TrivyImage[Trivy Image Scan]:::security
+        Push[Push to ECR]:::devops
+        Deploy[Trigger ECS Deployment]:::devops
+    end
+
+    %% AWS Infrastructure
+    subgraph AWS [AWS Cloud Infrastructure]
+        ECR[(Elastic Container Registry)]:::aws
+        
+        subgraph VPC [Custom VPC]
+            ALB[Application Load Balancer]:::aws
+            
+            subgraph Private Subnets
+                ECS[ECS Fargate Cluster]:::aws
+                Task1[App Task 1]:::aws
+                Task2[App Task 2]:::aws
+                ECS --> Task1
+                ECS --> Task2
+            end
+        end
+        
+        CW[CloudWatch Logs/Metrics]:::aws
+    end
+
+    %% Observability
+    Grafana[Grafana Dashboard]:::devops
+
+    %% Flows
+    Dev -->|Push Code| GitHub
+    GitHub -->|Webhook Trigger| Build
+    
+    Build --> Sonar
+    Sonar -->|Quality Gate| TrivyFS
+    TrivyFS -->|Blocks on CVE| DockerBuild
+    DockerBuild --> TrivyImage
+    TrivyImage -->|Blocks on CVE| Push
+    Push --> ECR
+    Push --> Deploy
+    
+    Deploy -->|Update Service| ECS
+    ECR -->|Pull Image| ECS
+    
+    EndUser -->|HTTP/HTTPS| ALB
+    ALB -->|Port 8000| Task1
+    ALB -->|Port 8000| Task2
+    
+    Task1 -->|Metrics| CW
+    Task2 -->|Metrics| CW
+    CW -->|Visualize| Grafana
+```
 
 ---
 
