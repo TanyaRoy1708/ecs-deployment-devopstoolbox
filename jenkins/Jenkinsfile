@@ -8,7 +8,6 @@ pipeline {
         IMAGE_TAG           = "${BUILD_NUMBER}"
         ECS_CLUSTER         = 'ecs-project-cluster'
         ECS_SERVICE         = 'ecs-project-service'
-        ECS_TASK_FAMILY     = 'ecs-project-task'
         // SonarCloud Project Key
         SONAR_PROJECT_KEY   = 'ecs-project'
     }
@@ -38,8 +37,7 @@ pipeline {
                             -v "$PWD":/app \
                             -w /app \
                             python:3.11-slim \
-                            sh -c "trap 'rm -rf .pytest_cache tests/__pycache__ __pycache__' EXIT; \
-                                   pip install --quiet -r requirements.txt pytest-cov \
+                            sh -c "pip install --quiet -r requirements.txt pytest-cov \
                                    && python -m pytest tests/ -v --tb=short \
                                       --junitxml=test-results.xml \
                                       --cov=. --cov-report=xml:coverage.xml \
