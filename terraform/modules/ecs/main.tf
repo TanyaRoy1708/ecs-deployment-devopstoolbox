@@ -8,7 +8,7 @@ resource "aws_ecs_cluster" "main" {
 
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.project}"
-  retention_in_days = 7
+  retention_in_days = 30
 }
 
 resource "aws_iam_role" "ecs_task_execution" {

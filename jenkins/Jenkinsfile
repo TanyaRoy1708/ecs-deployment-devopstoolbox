@@ -34,8 +34,8 @@ pipeline {
                     sh '''
                         docker run --rm \
                             -e PYTHONDONTWRITEBYTECODE=1 \
-                            -v "$PWD":/app \
-                            -w /app \
+                            -v "$PWD":"$PWD" \
+                            -w "$PWD" \
                             python:3.11-slim \
                             sh -c "pip install --quiet -r requirements.txt pytest-cov \
                                    && python -m pytest tests/ -v --tb=short \

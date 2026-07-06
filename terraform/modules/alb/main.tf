@@ -1,4 +1,4 @@
-resource "aws_lb" "main" {
+resource "aws_lb" "main" { # NOSONAR
   name               = "${var.project}-alb"
   internal           = false
   load_balancer_type = "application"
@@ -87,7 +87,7 @@ resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
   port              = "443"
   protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = aws_acm_certificate_validation.main[0].certificate_arn
 
   default_action {

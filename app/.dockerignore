@@ -1,0 +1,24 @@
+# Version control
+.git
+.gitignore
+
+# CI/CD and Analysis
+Jenkinsfile
+sonar-project.properties
+.scannerwork/
+.pytest_cache/
+coverage.xml
+test-results.xml
+test-results.txt
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Unit Tests (Not needed in prod container)
+tests/
+
+# Infrastructure
+terraform/
+scripts/

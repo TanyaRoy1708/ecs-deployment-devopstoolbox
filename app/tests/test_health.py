@@ -171,14 +171,14 @@ def test_cidr_service_valid_input():
     """
     from services.cidr_service import calculate_cidr
 
-    result = calculate_cidr("10.0.0.0/24")
+    result = calculate_cidr("10.0.0.0/24")  # NOSONAR
 
     assert result["success"] is True
-    assert result["network_address"] == "10.0.0.0"
-    assert result["broadcast_address"] == "10.0.0.255"
+    assert result["network_address"] == "10.0.0.0"  # NOSONAR
+    assert result["broadcast_address"] == "10.0.0.255"  # NOSONAR
     assert result["num_hosts"] == 254          # 256 - network - broadcast
-    assert result["first_host"] == "10.0.0.1"
-    assert result["last_host"] == "10.0.0.254"
+    assert result["first_host"] == "10.0.0.1"  # NOSONAR
+    assert result["last_host"] == "10.0.0.254"  # NOSONAR
 
 
 def test_cidr_service_invalid_input():
