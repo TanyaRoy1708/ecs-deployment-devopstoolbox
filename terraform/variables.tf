@@ -26,8 +26,4 @@ variable "image_tag" {
   default     = "latest"
 }
 
-variable "domain_name" {
-  description = "Optional domain name for HTTPS/TLS configuration. Leave empty for HTTP only."
-  type        = string
-  default     = ""
-}
+

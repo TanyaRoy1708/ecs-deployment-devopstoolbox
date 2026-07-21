@@ -180,7 +180,7 @@ flowchart TD
     Deploy -->|Update Service| ECS
     ECR -->|Pull Image| ECS
     
-    EndUser -->|HTTP/HTTPS| ALB
+    EndUser -->|HTTP| ALB
     ALB -->|Port 8000| Task1
     ALB -->|Port 8000| Task2
     

@@ -22,7 +22,6 @@ module "security" {
   project     = var.project
   vpc_id      = module.networking.vpc_id
   app_port    = var.app_port
-  domain_name = var.domain_name
 }
 
 module "ecr" {
@@ -36,7 +35,6 @@ module "alb" {
   vpc_id            = module.networking.vpc_id
   public_subnet_ids = module.networking.public_subnet_ids
   alb_sg_id         = module.security.alb_sg_id
-  domain_name       = var.domain_name
 }
 
 module "ecs" {

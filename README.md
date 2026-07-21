@@ -34,7 +34,7 @@ flowchart TD
 
     %% CI/CD Pipeline
     subgraph Pipeline [Jenkins CI/CD Pipeline]
-        Build[Build & Unit Test]:::devops
+        Build[Unit Test & Coverage]:::devops
         Sonar[SonarCloud SAST]:::security
         TrivyFS[Trivy FS Scan]:::security
         DockerBuild[Docker Build]:::devops
@@ -80,7 +80,7 @@ flowchart TD
     Deploy -->|Update Service| ECS
     ECR -->|Pull Image| ECS
     
-    EndUser -->|HTTP/HTTPS| ALB
+    EndUser -->|HTTP| ALB
     ALB -->|Port 8000| Task1
     ALB -->|Port 8000| Task2
     
