@@ -2,21 +2,12 @@
 REGION="us-east-1"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 BUCKET_NAME="ecs-project-tfstate-${ACCOUNT_ID}"
-TABLE_NAME="terraform-state-lock"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TERRAFORM_DIR="${SCRIPT_DIR}/../terraform"
 
 echo "Cleaning up Terraform Remote State infrastructure..."
 
-# 1. Delete DynamoDB table
-if aws dynamodb describe-table --table-name "$TABLE_NAME" --region "$REGION" > /dev/null 2>&1; then
-    echo "Deleting DynamoDB table: $TABLE_NAME..."
-    aws dynamodb delete-table --table-name "$TABLE_NAME" --region "$REGION" > /dev/null
-else
-    echo "DynamoDB table $TABLE_NAME does not exist, skipping."
-fi
-
-# 2. Empty and delete S3 Bucket
+# 1. Empty and delete S3 Bucket
 if aws s3api head-bucket --bucket "$BUCKET_NAME" > /dev/null 2>&1; then
     echo "Emptying S3 bucket (including all versions and delete markers): $BUCKET_NAME..."
     
@@ -38,16 +29,17 @@ else
     echo "S3 bucket $BUCKET_NAME does not exist, skipping."
 fi
 
-# 3. Remove local backend configuration and cache
-if [ -f "${TERRAFORM_DIR}/backend.tf" ]; then
-    echo "Removing generated ${TERRAFORM_DIR}/backend.tf..."
-    rm "${TERRAFORM_DIR}/backend.tf"
-fi
-
-if [ -d "${TERRAFORM_DIR}/.terraform" ]; then
-    echo "Removing local .terraform directory cache..."
-    rm -rf "${TERRAFORM_DIR}/.terraform"
-fi
+# 2. Remove local backend configuration and cache
+for dir in "${TERRAFORM_DIR}" "${TERRAFORM_DIR}/platform" "${TERRAFORM_DIR}/app"; do
+    if [ -f "${dir}/backend.tf" ]; then
+        echo "Removing generated ${dir}/backend.tf..."
+        rm -f "${dir}/backend.tf"
+    fi
+    if [ -d "${dir}/.terraform" ]; then
+        echo "Removing cache ${dir}/.terraform..."
+        rm -rf "${dir}/.terraform"
+    fi
+done
 
 echo ""
 echo "Cleanup complete!"

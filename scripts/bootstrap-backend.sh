@@ -4,11 +4,10 @@ set -e
 REGION="us-east-1"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 BUCKET_NAME="ecs-project-tfstate-${ACCOUNT_ID}"
-TABLE_NAME="terraform-state-lock"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TERRAFORM_DIR="${SCRIPT_DIR}/../terraform"
 
-echo "Bootstrapping Terraform Remote State..."
+echo "Bootstrapping Terraform Remote State with S3 Native State Locking (No DynamoDB needed)..."
 
 # 1. Create S3 Bucket (if it doesn't exist)
 if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
@@ -19,34 +18,32 @@ else
     echo "S3 bucket $BUCKET_NAME already exists."
 fi
 
-# 2. Create DynamoDB Table (if it doesn't exist)
-if ! aws dynamodb describe-table --table-name "$TABLE_NAME" --region "$REGION" 2>/dev/null; then
-    echo "Creating DynamoDB table: $TABLE_NAME..."
-    aws dynamodb create-table \
-        --table-name "$TABLE_NAME" \
-        --attribute-definitions AttributeName=LockID,AttributeType=S \
-        --key-schema AttributeName=LockID,KeyType=HASH \
-        --billing-mode PAY_PER_REQUEST \
-        --region "$REGION" > /dev/null
-else
-    echo "DynamoDB table $TABLE_NAME already exists."
+# 2. Generate backend.tf for Platform (Layer 1)
+PLATFORM_TEMPLATE="${TERRAFORM_DIR}/platform/backend.tf.example"
+PLATFORM_OUTPUT="${TERRAFORM_DIR}/platform/backend.tf"
+if [ -f "$PLATFORM_TEMPLATE" ]; then
+    sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$PLATFORM_TEMPLATE" > "$PLATFORM_OUTPUT"
+    echo "Generated ${PLATFORM_OUTPUT} (key: platform/terraform.tfstate, lock: S3 native)"
 fi
 
-# 3. Generate terraform/backend.tf from template (backend.tf is gitignored)
-TEMPLATE="${TERRAFORM_DIR}/backend.tf.example"
-OUTPUT="${TERRAFORM_DIR}/backend.tf"
-
-if [ ! -f "$TEMPLATE" ]; then
-    echo "ERROR: $TEMPLATE not found. Cannot generate backend.tf."
-    exit 1
+# 3. Generate backend.tf for App (Layer 2)
+APP_TEMPLATE="${TERRAFORM_DIR}/app/backend.tf.example"
+APP_OUTPUT="${TERRAFORM_DIR}/app/backend.tf"
+if [ -f "$APP_TEMPLATE" ]; then
+    sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$APP_TEMPLATE" > "$APP_OUTPUT"
+    echo "Generated ${APP_OUTPUT} (key: app/dev/terraform.tfstate, lock: S3 native)"
 fi
-
-sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$TEMPLATE" > "$OUTPUT"
-echo "Generated ${OUTPUT} with bucket: ${BUCKET_NAME}"
-echo "Note: backend.tf is gitignored — your Account ID will not be committed."
 
 echo ""
 echo "Bootstrap complete!"
 echo "--------------------------------------------------------"
-echo "Next step: cd terraform && terraform init"
+echo "Remote State: S3 Native Locking enabled (use_lockfile = true)"
+echo "Zero DynamoDB tables required."
+echo "--------------------------------------------------------"
+echo "Deployment Order (Enterprise Two-Layer Architecture):"
+echo "1. Layer 1 (Platform - Deploy Once):"
+echo "   cd terraform/platform && terraform init && terraform apply"
+echo ""
+echo "2. Layer 2 (App - Deploy Per Environment):"
+echo "   cd terraform/app && terraform init && terraform apply -var-file=environments/dev/terraform.tfvars"
 echo "--------------------------------------------------------"
