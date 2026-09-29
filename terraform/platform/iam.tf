@@ -1,5 +1,10 @@
+data "aws_caller_identity" "current" {}
+
+# -----------------------------------------------------------------------------
+# Jenkins EC2 IAM Role & Instance Profile
+# -----------------------------------------------------------------------------
 resource "aws_iam_role" "jenkins_ec2_role" {
-  name = "Jenkins-EC2-Deployer-Role"
+  name = "${var.project}-jenkins-ec2-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -11,10 +16,10 @@ resource "aws_iam_role" "jenkins_ec2_role" {
   })
 }
 
-# Single custom policy matching ONLY the Jenkinsfile commands
+# Scoped custom policy matching Jenkinsfile pipeline operations
 resource "aws_iam_policy" "jenkins_deployer_policy" {
-  name        = "Jenkins-EC2-Deployer-Policy"
-  description = "Scoped permissions matching Jenkinsfile and Grafana operations"
+  name        = "${var.project}-jenkins-deployer-policy"
+  description = "Scoped permissions matching Jenkins CI/CD pipeline operations"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -39,9 +44,9 @@ resource "aws_iam_policy" "jenkins_deployer_policy" {
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload"
         ]
-        Resource = module.ecr.repository_url != "" ? "arn:aws:ecr:${var.aws_region}:*:repository/${var.project}" : "*"
+        Resource = module.ecr.repository_arn
       },
-      # 3. Trigger deployment & wait for stability on THIS cluster and service only
+      # 3. Trigger deployment & wait for stability on ECS clusters/services
       {
         Sid      = "ECSUpdateService"
         Effect   = "Allow"
@@ -50,8 +55,8 @@ resource "aws_iam_policy" "jenkins_deployer_policy" {
           "ecs:DescribeServices"
         ]
         Resource = [
-          "arn:aws:ecs:${var.aws_region}:*:service/${var.project}-cluster/${var.project}-service",
-          "arn:aws:ecs:${var.aws_region}:*:cluster/${var.project}-cluster"
+          "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:service/${var.project}*/*",
+          "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.project}*"
         ]
       }
     ]
@@ -71,6 +76,6 @@ resource "aws_iam_role_policy_attachment" "jenkins_cloudwatch_policy" {
 }
 
 resource "aws_iam_instance_profile" "jenkins_ec2_profile" {
-  name = "Jenkins-EC2-Deployer-Profile"
+  name = "${var.project}-jenkins-ec2-profile"
   role = aws_iam_role.jenkins_ec2_role.name
 }
