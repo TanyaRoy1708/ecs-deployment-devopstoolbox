@@ -115,6 +115,13 @@ A pre-built Grafana dashboard monitors the live application using CloudWatch as 
 
 ## Architecture Diagram
 
+<p align="center">
+  <img src="./screenshots/infrastructure/diagram.png" alt="Architecture Diagram" width="100%"/>
+</p>
+
+<details>
+<summary><b>View Mermaid Architecture Flowchart</b></summary>
+
 ```mermaid
 flowchart TD
     %% Define Styles
@@ -188,3 +195,5 @@ flowchart TD
     Task2 -->|Metrics| CW
     CW -->|Visualize| Grafana
 ```
+
+</details>

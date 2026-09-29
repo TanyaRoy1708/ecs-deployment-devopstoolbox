@@ -15,6 +15,13 @@ A production-grade DevOps portfolio project demonstrating a complete CI/CD lifec
 
 > 📸 **[View full project screenshots and visual walkthrough →](./docs/SHOWCASE.md)**
 
+<p align="center">
+  <img src="./docs/screenshots/infrastructure/diagram.png" alt="DevOps Toolbox End-to-End AWS Architecture" width="100%"/>
+</p>
+
+<details>
+<summary><b>View Mermaid Architecture Flowchart</b></summary>
+
 ```mermaid
 flowchart TD
     %% Define Styles
@@ -92,6 +99,8 @@ flowchart TD
     Task2 -->|Metrics & Logs via NAT| CW
     CW -->|Visualize| Grafana
 ```
+
+</details>
 
 ---
 
