@@ -1,15 +1,10 @@
 # =============================================================================
-# ARCHITECTURAL DECISION NOTE: Public Subnets for ECS Tasks
+# ARCHITECTURAL DECISION NOTE: Network Isolation & Defense-in-Depth
 # -----------------------------------------------------------------------------
-# ECS Fargate tasks are intentionally placed in public subnets for this demo
-# to avoid NAT Gateway costs (~$32/month per AZ). Security is enforced at the
-# Security Group layer — tasks only accept inbound traffic from the ALB's
-# Security Group ID (not from 0.0.0.0/0), making them unreachable from the
-# internet directly.
-#
-# In a production or compliance-sensitive environment (PCI-DSS, HIPAA, SOC2),
-# move ECS tasks to private subnets and route outbound traffic through a
-# NAT Gateway to achieve network-level isolation (defense-in-depth).
+# - Public Subnets: Host the Internet-facing ALB and NAT Gateway.
+# - Private Subnets: Host ECS Fargate tasks with no public IPs (assign_public_ip=false).
+# - NAT Gateway: Routes outbound internet traffic (e.g. pulling Docker images from ECR,
+#   sending logs to CloudWatch) while completely preventing direct inbound internet traffic.
 # =============================================================================
 
 data "aws_availability_zones" "available" {
@@ -23,6 +18,9 @@ resource "aws_vpc" "main" {
   tags                 = { Name = "${var.project}-vpc" }
 }
 
+# -----------------------------------------------------------------------------
+# Public Subnets & Routing (ALB & NAT Gateway)
+# -----------------------------------------------------------------------------
 resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.main.id
@@ -50,4 +48,47 @@ resource "aws_route_table_association" "public" {
   count          = 2
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
+}
+
+# -----------------------------------------------------------------------------
+# Private Subnets & NAT Gateway (ECS Fargate Tasks)
+# -----------------------------------------------------------------------------
+resource "aws_subnet" "private" {
+  count                   = 2
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index + 10)
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = false
+  tags                    = { Name = "${var.project}-private-${count.index}" }
+}
+
+resource "aws_eip" "nat" {
+  domain     = "vpc"
+  depends_on = [aws_internet_gateway.main]
+  tags       = { Name = "${var.project}-nat-eip" }
+}
+
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+  tags          = { Name = "${var.project}-nat-gw" }
+
+  depends_on = [aws_internet_gateway.main]
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main.id
+  }
+
+  tags = { Name = "${var.project}-private-rt" }
+}
+
+resource "aws_route_table_association" "private" {
+  count          = 2
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
 }

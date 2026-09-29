@@ -27,3 +27,14 @@ output "jenkins_sg_id" {
   description = "Security Group ID for the Jenkins EC2 Instance"
   value       = module.security.jenkins_sg_id
 }
+
+output "public_subnet_ids" {
+  description = "IDs of the deployed public subnets"
+  value       = module.networking.public_subnet_ids
+}
+
+output "private_subnet_ids" {
+  description = "IDs of the deployed private subnets"
+  value       = module.networking.private_subnet_ids
+}
+

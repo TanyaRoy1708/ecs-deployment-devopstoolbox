@@ -35,6 +35,7 @@ module "alb" {
   vpc_id            = module.networking.vpc_id
   public_subnet_ids = module.networking.public_subnet_ids
   alb_sg_id         = module.security.alb_sg_id
+  app_port          = var.app_port
 }
 
 module "ecs" {
@@ -42,7 +43,7 @@ module "ecs" {
   project              = var.project
   aws_region           = var.aws_region
   vpc_id               = module.networking.vpc_id
-  public_subnet_ids    = module.networking.public_subnet_ids
+  private_subnet_ids   = module.networking.private_subnet_ids
   ecs_sg_id            = module.security.ecs_sg_id
   alb_target_group_arn = module.alb.target_group_arn
   ecr_repo_url         = module.ecr.repository_url

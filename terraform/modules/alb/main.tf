@@ -1,4 +1,4 @@
-resource "aws_lb" "main" { # NOSONAR
+resource "aws_lb" "main" { 
   name               = "${var.project}-alb"
   internal           = false
   load_balancer_type = "application"
@@ -8,7 +8,7 @@ resource "aws_lb" "main" { # NOSONAR
 
 resource "aws_lb_target_group" "app" {
   name        = "${var.project}-tg"
-  port        = 80
+  port        = var.app_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
@@ -25,7 +25,7 @@ resource "aws_lb_target_group" "app" {
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
-  port              = "80"
+  port              = 80
   protocol          = "HTTP"
 
   default_action {
