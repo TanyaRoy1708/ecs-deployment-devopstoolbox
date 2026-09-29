@@ -1,14 +1,18 @@
 pipeline {
     agent any
 
+    options {
+        timeout(time: 30, unit: 'MINUTES')           // Kill hung pipelines
+        disableConcurrentBuilds()                     // Prevent race conditions on same branch
+        buildDiscarder(logRotator(numToKeepStr: '10')) // Keep only last 10 builds
+    }
+
     environment {
         AWS_REGION          = 'us-east-1'
-        // Pulled from Jenkins credentials manager
         AWS_ACCOUNT_ID      = credentials('aws-account-id')
-        IMAGE_TAG           = "${BUILD_NUMBER}"
         ECS_CLUSTER         = 'ecs-project-cluster'
         ECS_SERVICE         = 'ecs-project-service'
-        // SonarCloud Project Key
+        ECR_REPO_NAME       = 'ecs-project'
         SONAR_PROJECT_KEY   = 'TanyaRoy1708_ecs-deployment-devopstoolbox'
     }
 
@@ -16,8 +20,16 @@ pipeline {
         stage('Initialize Pipeline') {
             steps {
                 script {
+                    // Versioned tag: "<build_number>-<git_short_sha>" for traceability & rollback
+                    env.GIT_SHORT   = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.IMAGE_TAG   = "${BUILD_NUMBER}-${env.GIT_SHORT}"
+
                     env.ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-                    env.ECR_REPO     = "${env.ECR_REGISTRY}/ecs-project"
+                    env.ECR_REPO     = "${env.ECR_REGISTRY}/${ECR_REPO_NAME}"
+
+                    echo "Branch   : ${env.BRANCH_NAME ?: 'unknown'}"
+                    echo "Image Tag: ${env.IMAGE_TAG}"
+                    echo "ECR Repo : ${env.ECR_REPO}"
                 }
             }
         }
@@ -28,6 +40,9 @@ pipeline {
             }
         }
 
+        // -----------------------------------------------------------------------
+        // TEST
+        // -----------------------------------------------------------------------
         stage('Run Unit Tests & Coverage') {
             steps {
                 dir('app') {
@@ -47,12 +62,10 @@ pipeline {
             }
             post {
                 always {
-                    // Publishes results to Jenkins 'Tests' tab
                     junit allowEmptyResults: true, testResults: 'app/test-results.xml'
                     archiveArtifacts artifacts: 'app/test-results.txt,app/coverage.xml', allowEmptyArchive: true
-                    
-                    // Clean up root-owned cache folders created by Python inside Docker
-                    // We use an alpine container to safely delete them without permission errors
+
+                    // Safely clean root-owned Docker cache folders
                     dir('app') {
                         sh 'docker run --rm -v "$PWD":/app -w /app alpine rm -rf .pytest_cache tests/__pycache__ __pycache__ || true'
                     }
@@ -60,20 +73,20 @@ pipeline {
             }
         }
 
+        // -----------------------------------------------------------------------
+        // QUALITY GATE
+        // -----------------------------------------------------------------------
         stage('SonarCloud Analysis') {
             steps {
                 dir('app') {
-                    // 'SonarCloud' must match the name in Jenkins → Manage Jenkins → System → SonarQube servers
-                    // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_TOKEN automatically from Jenkins config
+                    // sonar-project.properties declares projectKey, org, host, sources, and reports.
+                    // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_TOKEN automatically.
                     withSonarQubeEnv('SonarCloud') {
                         script {
-                            // Define the tool. IMPORTANT: 'sonar-scanner' must match the name you gave it in Jenkins Tools!
                             def scannerHome = tool 'sonar-scanner'
-                            
                             sh """
-                                ${scannerHome}/bin/sonar-scanner \\
-                                    -Dsonar.host.url=https://sonarcloud.io \\
-                                    -Dsonar.branch.name=${env.BRANCH_NAME ?: 'main'} \\
+                                ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.branch.name=${env.BRANCH_NAME ?: 'main'} \
                                     -Dsonar.buildString=${BUILD_NUMBER}
                             """
                         }
@@ -82,17 +95,29 @@ pipeline {
             }
         }
 
+        stage('Quality Gate') {
+            steps {
+                // Wait for SonarCloud to finish processing and evaluate gate status
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
+        // -----------------------------------------------------------------------
+        // SECURITY SCANS
+        // -----------------------------------------------------------------------
         stage('Trivy FS Scan') {
             steps {
                 dir('app') {
                     sh '''
-                        trivy fs --exit-code 0 \
-                                 --ignore-unfixed \
-                                 --severity HIGH,CRITICAL \
-                                 --format table \
-                                 --output trivy-fs-report.txt \
-                                 .
+                        trivy fs \
+                            --exit-code 0 \
+                            --ignore-unfixed \
+                            --severity HIGH,CRITICAL \
+                            --format table \
+                            --output trivy-fs-report.txt \
+                            .
                     '''
                 }
             }
@@ -107,21 +132,30 @@ pipeline {
             steps {
                 dir('app') {
                     sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
-                    sh "docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest"
                 }
             }
         }
 
         stage('Trivy Image Scan') {
             steps {
-                sh '''
-                    trivy image --exit-code 0 \
-                                --ignore-unfixed \
-                                --severity HIGH,CRITICAL \
-                                --format table \
-                                --output trivy-image-report.txt \
-                                ${ECR_REPO}:${IMAGE_TAG}
-                '''
+                // CRITICAL vulnerabilities fail the build
+                // HIGH vulnerabilities are archived for review (exit-code 0)
+                sh """
+                    trivy image \
+                        --exit-code 1 \
+                        --ignore-unfixed \
+                        --severity CRITICAL \
+                        --format table \
+                        ${ECR_REPO}:${IMAGE_TAG}
+
+                    trivy image \
+                        --exit-code 0 \
+                        --ignore-unfixed \
+                        --severity HIGH \
+                        --format table \
+                        --output trivy-image-report.txt \
+                        ${ECR_REPO}:${IMAGE_TAG}
+                """
             }
             post {
                 always {
@@ -130,18 +164,25 @@ pipeline {
             }
         }
 
+        // -----------------------------------------------------------------------
+        // PUSH - main branch only
+        // -----------------------------------------------------------------------
         stage('Push to ECR') {
+            when { branch 'main' }
             steps {
                 sh '''
                     aws ecr get-login-password --region ${AWS_REGION} | \
                     docker login --username AWS --password-stdin ${ECR_REGISTRY}
                     docker push ${ECR_REPO}:${IMAGE_TAG}
-                    docker push ${ECR_REPO}:latest
                 '''
             }
         }
 
+        // -----------------------------------------------------------------------
+        // DEPLOY - main branch only
+        // -----------------------------------------------------------------------
         stage('Deploy to ECS') {
+            when { branch 'main' }
             steps {
                 sh '''
                     aws ecs update-service \
@@ -154,8 +195,9 @@ pipeline {
         }
 
         stage('Verify Deployment') {
+            when { branch 'main' }
             options {
-                timeout(time: 5, unit: 'MINUTES')
+                timeout(time: 10, unit: 'MINUTES')
             }
             steps {
                 sh '''
@@ -163,7 +205,7 @@ pipeline {
                         --cluster ${ECS_CLUSTER} \
                         --services ${ECS_SERVICE} \
                         --region ${AWS_REGION}
-                    echo "Service is stable"
+                    echo "Service is stable - deployment verified"
                 '''
             }
         }
@@ -171,14 +213,21 @@ pipeline {
 
     post {
         success {
-            echo "Deployment successful — Build #${BUILD_NUMBER}"
+            echo "Deployment successful - Build #${BUILD_NUMBER} | Tag: ${IMAGE_TAG}"
+            // Uncomment below once Slack plugin is configured:
+            // slackSend channel: '#deployments', color: 'good',
+            //     message: "*${env.JOB_NAME}* #${BUILD_NUMBER} deployed successfully.\nTag: `${IMAGE_TAG}` | Branch: `${env.BRANCH_NAME}`\n${env.BUILD_URL}"
         }
         failure {
-            echo "Pipeline failed — check SonarCloud Quality Gate, Trivy reports, or ECS logs"
+            echo "Pipeline failed - Build #${BUILD_NUMBER} | Tag: ${IMAGE_TAG}"
+            // slackSend channel: '#deployments', color: 'danger',
+            //     message: "*${env.JOB_NAME}* #${BUILD_NUMBER} failed.\nBranch: `${env.BRANCH_NAME}` | Check: ${env.BUILD_URL}"
         }
         always {
-            sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest || true"
+            // Remove local Docker image to free disk space on agent
+            sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} || true"
+            // Wipe the workspace to prevent stale artifact accumulation
+            cleanWs()
         }
     }
 }
-
