@@ -139,9 +139,17 @@ flowchart TD
         Code[(Source Code + Dockerfile)]
     end
 
+    %% Platform Foundation
+    subgraph Platform [Layer 1: Platform Infrastructure]
+        VPC[Custom VPC]:::aws
+        NAT[NAT Gateway]:::aws
+        Jenkins[Jenkins & Grafana EC2]:::devops
+        ECR[(Elastic Container Registry)]:::aws
+    end
+
     %% CI/CD Pipeline
     subgraph Pipeline [Jenkins CI/CD Pipeline]
-        Build[Build & Unit Test]:::devops
+        Build[Unit Test & Coverage]:::devops
         Sonar[SonarCloud SAST]:::security
         TrivyFS[Trivy FS Scan]:::security
         DockerBuild[Docker Build]:::devops
@@ -150,26 +158,22 @@ flowchart TD
         Deploy[Trigger ECS Deployment]:::devops
     end
 
-    %% AWS Infrastructure
-    subgraph AWS [AWS Cloud Infrastructure]
-        ECR[(Elastic Container Registry)]:::aws
-        
-        subgraph VPC [Custom VPC]
+    %% Application Runtime
+    subgraph AppRuntime [Layer 2: Application Runtime]
+        subgraph PublicSubnets [Public Subnets]
             ALB[Application Load Balancer]:::aws
-            
-            subgraph Public Subnets ["Public Subnets (Secured via SG)"]
-                ECS[ECS Fargate Cluster]:::aws
-                Task1[App Task 1]:::aws
-                Task2[App Task 2]:::aws
-                ECS --> Task1
-                ECS --> Task2
-            end
         end
-        
-        CW[CloudWatch Logs/Metrics]:::aws
+
+        subgraph PrivateSubnets [Private Subnets]
+            ECS[ECS Fargate Cluster]:::aws
+            Task1[App Task 1]:::aws
+            Task2[App Task 2]:::aws
+            ECS --> Task1
+            ECS --> Task2
+        end
     end
 
-    %% Observability
+    CW[CloudWatch Logs/Metrics]:::aws
     Grafana[Grafana Dashboard]:::devops
 
     %% Flows
@@ -185,14 +189,14 @@ flowchart TD
     Push --> Deploy
     
     Deploy -->|Update Service| ECS
-    ECR -->|Pull Image| ECS
+    ECS -->|Pull Image via NAT| ECR
     
     EndUser -->|HTTP| ALB
     ALB -->|Port 8000| Task1
     ALB -->|Port 8000| Task2
     
-    Task1 -->|Metrics| CW
-    Task2 -->|Metrics| CW
+    Task1 -->|Metrics & Logs via NAT| CW
+    Task2 -->|Metrics & Logs via NAT| CW
     CW -->|Visualize| Grafana
 ```
 
