@@ -32,6 +32,14 @@ flowchart TD
         Code[(Source Code + Dockerfile)]
     end
 
+    %% Platform Foundation
+    subgraph Platform [Layer 1: Platform Infrastructure]
+        VPC[Custom VPC]:::aws
+        NAT[NAT Gateway]:::aws
+        Jenkins[Jenkins & Grafana EC2]:::devops
+        ECR[(Elastic Container Registry)]:::aws
+    end
+
     %% CI/CD Pipeline
     subgraph Pipeline [Jenkins CI/CD Pipeline]
         Build[Unit Test & Coverage]:::devops
@@ -43,26 +51,22 @@ flowchart TD
         Deploy[Trigger ECS Deployment]:::devops
     end
 
-    %% AWS Infrastructure
-    subgraph AWS [AWS Cloud Infrastructure]
-        ECR[(Elastic Container Registry)]:::aws
-        
-        subgraph VPC [Custom VPC]
+    %% Application Runtime
+    subgraph AppRuntime [Layer 2: Application Runtime]
+        subgraph PublicSubnets [Public Subnets]
             ALB[Application Load Balancer]:::aws
-            
-            subgraph Public Subnets ["Public Subnets (Secured via SG)"]
-                ECS[ECS Fargate Cluster]:::aws
-                Task1[App Task 1]:::aws
-                Task2[App Task 2]:::aws
-                ECS --> Task1
-                ECS --> Task2
-            end
         end
-        
-        CW[CloudWatch Logs/Metrics]:::aws
+
+        subgraph PrivateSubnets [Private Subnets]
+            ECS[ECS Fargate Cluster]:::aws
+            Task1[App Task 1]:::aws
+            Task2[App Task 2]:::aws
+            ECS --> Task1
+            ECS --> Task2
+        end
     end
 
-    %% Observability
+    CW[CloudWatch Logs/Metrics]:::aws
     Grafana[Grafana Dashboard]:::devops
 
     %% Flows
@@ -78,14 +82,14 @@ flowchart TD
     Push --> Deploy
     
     Deploy -->|Update Service| ECS
-    ECR -->|Pull Image| ECS
+    ECS -->|Pull Image via NAT| ECR
     
     EndUser -->|HTTP| ALB
     ALB -->|Port 8000| Task1
     ALB -->|Port 8000| Task2
     
-    Task1 -->|Metrics| CW
-    Task2 -->|Metrics| CW
+    Task1 -->|Metrics & Logs via NAT| CW
+    Task2 -->|Metrics & Logs via NAT| CW
     CW -->|Visualize| Grafana
 ```
 
@@ -95,47 +99,59 @@ flowchart TD
 
 | Pillar | Implementation |
 |---|---|
-| **Infrastructure as Code** | Modular Terraform — VPC, ALB, ECR, ECS, Security Groups, IAM |
+| **Infrastructure as Code** | Two-Layer Terraform (Platform: VPC, NAT Gateway, ECR, Jenkins EC2; Application: ECS Fargate, ALB, Auto Scaling) |
 | **CI/CD Automation** | Jenkins Declarative Pipeline (Build → Scan → Push → Deploy) |
 | **DevSecOps** | SonarCloud SAST + Aqua Trivy CVE scanning before every deployment |
-| **Container Orchestration** | AWS ECS Fargate with target-tracking auto-scaling |
+| **Container Orchestration** | AWS ECS Fargate with target-tracking auto-scaling (2 to 4 tasks) |
 | **Observability** | Grafana dashboards on top of CloudWatch metrics (CPU, Memory, 5xx) |
-| **Security** | IAM Roles, private Security Groups, no hardcoded AWS credentials |
-| **State Management** | Remote S3 backend with DynamoDB locking |
+| **Security & Isolation** | Private subnets for ECS tasks behind NAT Gateway, SG-to-SG mutual ingress, IAM instance profile (no static credentials) |
+| **State Management** | S3 Native State Locking (`use_lockfile = true`, zero DynamoDB) with isolated state files for platform and app |
 
 ---
 
 ## Repository Structure
 
-```
+```text
 .
 ├── app/                        # FastAPI Python application
 │   ├── main.py                 # Entrypoint & /health route
 │   ├── Dockerfile              # Multi-stage build, non-root user
-│   ├── .dockerignore           # Prevents sensitive files from leaking into image
-│   ├── sonar-project.properties
-│   ├── routers/                # API route handlers
+│   ├── .dockerignore           # Prevents sensitive files leaking into image
+│   ├── sonar-project.properties# SonarCloud static analysis config
+│   ├── routers/                # API route handlers (CIDR, Cron, K8s, Dockerfile)
 │   ├── services/               # Core business logic
 │   ├── static/                 # CSS & static assets
 │   ├── templates/              # Jinja2 HTML templates
-│   └── tests/                  # Pytest unit tests
+│   └── tests/                  # Pytest unit tests & coverage
 ├── terraform/
-│   ├── main.tf                 # Root module — calls all sub-modules
-│   ├── backend.tf              # S3 remote state + DynamoDB locking
-│   ├── iam.tf                  # Jenkins EC2 IAM instance profile
-│   ├── environments/dev/       # Environment-specific tfvars
-│   └── modules/
-│       ├── vpc/
-│       ├── alb/
-│       ├── ecs/
-│       ├── ecr/
-│       └── security/
+│   ├── README.md               # Detailed Two-Layer Architecture guide
+│   ├── platform/               # Layer 1: Platform Foundations (Deploy Once)
+│   │   ├── main.tf             # Networking & ECR module calls
+│   │   ├── iam.tf              # Jenkins EC2 IAM role & deployer policy
+│   │   ├── jenkins.tf          # Jenkins EC2 instance & Security Group
+│   │   ├── variables.tf        # Platform inputs
+│   │   ├── outputs.tf          # Outputs exported for Layer 2 (VPC ID, subnets, ECR)
+│   │   └── backend.tf.example  # S3 backend template (key: platform/terraform.tfstate)
+│   ├── app/                    # Layer 2: Application Runtime (Per Environment)
+│   │   ├── main.tf             # Reads platform state, provisions ALB & ECS
+│   │   ├── security.tf         # ALB & ECS Security Groups
+│   │   ├── variables.tf        # Application variables & overrides
+│   │   ├── outputs.tf          # ALB DNS endpoint
+│   │   ├── backend.tf.example  # S3 backend template (key: app/dev/terraform.tfstate)
+│   │   └── environments/
+│   │       ├── dev/            # Dev environment tfvars
+│   │       └── prod/           # Prod environment tfvars
+│   └── modules/                # Shared reusable Terraform modules
+│       ├── networking/         # VPC, Public & Private Subnets, NAT GW, IGW
+│       ├── alb/                # Application Load Balancer & Target Group
+│       ├── ecs/                # ECS Cluster, Task Definition, Service, Auto Scaling
+│       └── ecr/                # ECR Repository & Lifecycle Policies
 ├── jenkins/
 │   └── Jenkinsfile             # Declarative pipeline definition
 ├── scripts/
-│   ├── bootstrap-backend.sh    # Creates S3 bucket & DynamoDB table
-│   ├── cleanup-backend.sh      # Tears down remote state resources
-│   └── setup-jenkins.sh        # Zero-touch Jenkins + Trivy + Grafana install
+│   ├── bootstrap-backend.sh    # S3 state bucket bootstrap with native locking
+│   ├── cleanup-backend.sh      # Tears down remote state bucket & versions
+│   └── setup-jenkins.sh        # Automated bootstrap for Jenkins, Docker, Trivy, Grafana
 ├── monitoring/
 │   └── grafana-dashboard.json  # Pre-built CloudWatch dashboard template
 └── docs/
@@ -145,21 +161,32 @@ flowchart TD
 
 ---
 
-## Architecture Decision: Public Subnets (Cost vs. Isolation)
+## Architectural Design: Two-Layer Platform Isolation & Private Subnets
 
-ECS tasks run in **public subnets** restricted by tight Security Groups (tasks only accept traffic originating from the ALB's Security Group). This deliberately avoids NAT Gateways and VPC Endpoints, saving **~$55–$90/month** in baseline networking costs — a reasonable trade-off for a portfolio/startup environment.
+### 1. Two-Layer Infrastructure Isolation
+To protect critical foundations from deployment churn, Terraform is structured into two independently deployed layers:
+- **Layer 1 (Platform):** Provisions foundational VPC, NAT Gateway, ECR registry, and the Jenkins server with dedicated S3 state (`platform/terraform.tfstate`). Deployed once by platform administrators and rarely modified.
+- **Layer 2 (Application):** Provisions the ALB, ECS Fargate cluster, tasks, security groups, and auto-scaling policies with separate S3 state (`app/dev/terraform.tfstate`). It dynamically queries Layer 1 outputs via `terraform_remote_state`.
+- **Blast Radius Protection:** An application deployment error or state lock issue in the CI/CD pipeline can never corrupt or tear down VPC networking, NAT gateways, or container registries.
+
+### 2. Network Isolation & Defense-in-Depth
+- **Public Subnets:** Only host the Internet-facing Application Load Balancer, the NAT Gateway, and the Jenkins server.
+- **Private Subnets:** ECS Fargate tasks run in private subnets with `assign_public_ip = false`. Direct inbound access from the Internet is completely blocked.
+- **Outbound Egress:** Tasks pull images from ECR and stream logs to CloudWatch securely via the NAT Gateway.
+- **Mutual Security Groups:** The ECS security group strictly allows inbound traffic on port 8000 *only* from the ALB security group ID.
 
 ---
 
-## FinOps — Cost Estimate
+## FinOps - Cost Estimate
 
 | Resource | Specification | Est. Monthly Cost |
 |---|---|---|
 | Application Load Balancer | 1 ALB (us-east-1) | ~$16.00 |
 | ECS Fargate | 2 Tasks × (0.25 vCPU, 0.5 GB) | ~$16.00 |
-| Jenkins Server | 1 EC2 t3.medium | ~$30.40 |
-| S3 + DynamoDB (state) | Minimal usage | ~$1.00 |
-| **Total** | | **~$63.40 / month** |
+| Jenkins & Grafana Server | 1 EC2 t3.medium | ~$30.40 |
+| NAT Gateway | 1 Single-AZ NAT Gateway | ~$32.00 |
+| S3 Remote State | S3 Native Locking (zero DynamoDB) | ~$0.10 |
+| **Total** | | **~$94.50 / month** |
 
 > Estimates based on `us-east-1` on-demand pricing. Costs vary by region and usage.
 
@@ -177,34 +204,31 @@ docker-compose up --build
 
 ### Deploy to AWS
 
-#### 1. Bootstrap remote state
-
+#### 1. Bootstrap Remote State
+Initializes the S3 state bucket and generates `backend.tf` for both layers using S3 native state locking:
 ```bash
 ./scripts/bootstrap-backend.sh
 ```
 
-#### 2. Deploy infrastructure
-
+#### 2. Deploy Layer 1 (Platform Foundation)
+Provisions the VPC, NAT Gateway, ECR repository, and the Jenkins EC2 instance:
 ```bash
-cd terraform
+cd terraform/platform
+terraform init
+terraform apply -auto-approve
+```
+*Note: The Jenkins EC2 instance automatically installs Jenkins, Docker, Trivy, and Grafana on first boot via `scripts/setup-jenkins.sh` in its EC2 user data.*
+
+#### 3. Deploy Layer 2 (Application Runtime)
+Provisions the ALB, ECS Fargate cluster, tasks, and auto-scaling rules:
+```bash
+cd ../app
 terraform init
 terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
 ```
 
-#### 3. Provision the Jenkins server
-
-1. Launch an EC2 instance (`t3.medium`, Ubuntu 24.04).
-2. Attach the `ecs-project-jenkins-sg` Security Group and the `Jenkins-EC2-Deployer-Profile` IAM Role.
-3. Paste `scripts/setup-jenkins.sh` into the **User Data** field.
-4. Retrieve the initial admin password after boot:
-   ```bash
-   sudo cat /var/lib/jenkins/secrets/initialAdminPassword
-   ```
-
-#### 4. Configure SonarCloud
-
-SonarCloud is free for public repositories — no server required.
-
+#### 4. Configure SonarCloud (SaaS)
+SonarCloud is free for public repositories - zero servers to manage:
 1. Sign up at [sonarcloud.io](https://sonarcloud.io) with your GitHub account.
 2. Import this repository and note your **Organization Key**.
 3. Generate a token: **My Account → Security → Global Analysis Token**.
@@ -214,28 +238,32 @@ SonarCloud is free for public repositories — no server required.
    - Auth token: paste your token
 5. In Jenkins → Tools → **SonarQube Scanner**: add and enable auto-install.
 
-> **Note:** SonarCloud is configured asynchronously — it posts metrics to the dashboard without blocking the build. Trivy handles strict CVE blocking before deployment.
+#### 5. Run the Jenkins Pipeline
+1. In Jenkins, create a new Pipeline job pointing to this repository (`*/main`, `jenkins/Jenkinsfile`).
+2. Add `aws-account-id` as a Global Secret Text credential.
+3. Push code to `main` - the pipeline will automatically test, scan with SonarCloud, run Trivy CVE scans, build Docker image, push to ECR, and deploy to ECS.
 
-#### 5. Run the Jenkins pipeline
-
-1. Create a new Pipeline job → select **GitHub hook trigger for GITScm polling**.
-2. Point it to this repository (`*/main`, `jenkins/Jenkinsfile`).
-3. Add `aws-account-id` as a Global Secret Text credential.
-4. Push to `main` — the pipeline runs automatically.
-
-#### 6. Grafana monitoring
-
+#### 6. Grafana Monitoring
 1. Open Grafana at `http://<jenkins-ec2-ip>:3000` (default: `admin/admin`).
-2. Add a **CloudWatch** data source — use the EC2 IAM Role (no static keys needed).
-3. Import `monitoring/grafana-dashboard.json`.
+2. Add a **CloudWatch** data source (authenticates via the EC2 IAM Role automatically).
+3. Import `monitoring/grafana-dashboard.json` to monitor ECS CPU, memory, and Container Insights.
 
 ---
 
 ## Teardown
 
-```bash
-cd terraform
-terraform destroy -var-file="environments/dev/terraform.tfvars"
-```
+To destroy resources and avoid ongoing AWS charges:
 
-> **Note:** The Jenkins EC2 instance was provisioned manually — terminate it separately from the AWS Console after `terraform destroy` completes.
+```bash
+# 1. Destroy Application Layer
+cd terraform/app
+terraform destroy -var-file="environments/dev/terraform.tfvars" -auto-approve
+
+# 2. Destroy Platform Layer (including Jenkins EC2)
+cd ../platform
+terraform destroy -auto-approve
+
+# 3. Clean up S3 State Bucket
+cd ../..
+./scripts/cleanup-backend.sh
+```
