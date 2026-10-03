@@ -168,7 +168,6 @@ pipeline {
         // PUSH - main branch only
         // -----------------------------------------------------------------------
         stage('Push to ECR') {
-            when { branch 'main' }
             steps {
                 sh '''
                     aws ecr get-login-password --region ${AWS_REGION} | \
@@ -182,7 +181,6 @@ pipeline {
         // DEPLOY - main branch only
         // -----------------------------------------------------------------------
         stage('Deploy to ECS') {
-            when { branch 'main' }
             steps {
                 sh '''
                     aws ecs update-service \
@@ -195,7 +193,6 @@ pipeline {
         }
 
         stage('Verify Deployment') {
-            when { branch 'main' }
             options {
                 timeout(time: 10, unit: 'MINUTES')
             }
