@@ -8,12 +8,12 @@ pipeline {
     }
 
     environment {
-        AWS_REGION          = 'us-east-1'
-        AWS_ACCOUNT_ID      = credentials('aws-account-id')
-        ECS_CLUSTER         = 'ecs-project-dev-cluster'
-        ECS_SERVICE         = 'ecs-project-dev-service'
-        ECR_REPO_NAME       = 'ecs-project'
-        SONAR_PROJECT_KEY   = 'TanyaRoy1708_ecs-deployment-devopstoolbox'
+        AWS_REGION     = 'us-east-1'
+        AWS_ACCOUNT_ID = credentials('aws-account-id')
+        ECS_CLUSTER    = 'ecs-project-dev-cluster'
+        ECS_SERVICE    = 'ecs-project-dev-service'
+        TASK_FAMILY    = 'ecs-project-dev-task'
+        ECR_REPO_NAME  = 'ecs-project'
     }
 
     stages {
@@ -21,22 +21,12 @@ pipeline {
             steps {
                 script {
                     // Versioned tag: "<build_number>-<git_short_sha>" for traceability & rollback
-                    env.GIT_SHORT   = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    env.IMAGE_TAG   = "${BUILD_NUMBER}-${env.GIT_SHORT}"
-
+                    def gitShort     = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.IMAGE_TAG    = "${BUILD_NUMBER}-${gitShort}"
                     env.ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
                     env.ECR_REPO     = "${env.ECR_REGISTRY}/${ECR_REPO_NAME}"
-
-                    echo "Branch   : ${env.BRANCH_NAME ?: 'unknown'}"
-                    echo "Image Tag: ${env.IMAGE_TAG}"
-                    echo "ECR Repo : ${env.ECR_REPO}"
+                    echo "Image: ${env.ECR_REPO}:${env.IMAGE_TAG}"
                 }
-            }
-        }
-
-        stage('Checkout') {
-            steps {
-                checkout scm
             }
         }
 
@@ -105,57 +95,29 @@ pipeline {
         }
 
         // -----------------------------------------------------------------------
-        // SECURITY SCANS
+        // SECURITY SCANS (report-only; set --exit-code 1 to enforce)
         // -----------------------------------------------------------------------
         stage('Trivy FS Scan') {
             steps {
-                dir('app') {
-                    sh '''
-                        trivy fs \
-                            --exit-code 0 \
-                            --ignore-unfixed \
-                            --severity HIGH,CRITICAL \
-                            --format table \
-                            --output trivy-fs-report.txt \
-                            .
-                    '''
-                }
+                sh 'trivy fs --exit-code 0 --ignore-unfixed --severity HIGH,CRITICAL --output trivy-fs-report.txt app'
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'app/trivy-fs-report.txt', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'trivy-fs-report.txt', allowEmptyArchive: true
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                dir('app') {
-                    sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
-                }
+                // Immutable build tag only - no mutable ':latest' (ECR repo is IMMUTABLE)
+                sh 'docker build -t "$ECR_REPO:$IMAGE_TAG" app'
             }
         }
 
         stage('Trivy Image Scan') {
             steps {
-                // CRITICAL vulnerabilities fail the build
-                // HIGH vulnerabilities are archived for review (exit-code 0)
-                sh """
-                    trivy image \
-                        --exit-code 0 \
-                        --ignore-unfixed \
-                        --severity CRITICAL \
-                        --format table \
-                        ${ECR_REPO}:${IMAGE_TAG}
-
-                    trivy image \
-                        --exit-code 0 \
-                        --ignore-unfixed \
-                        --severity HIGH \
-                        --format table \
-                        --output trivy-image-report.txt \
-                        ${ECR_REPO}:${IMAGE_TAG}
-                """
+                sh 'trivy image --exit-code 0 --ignore-unfixed --severity HIGH,CRITICAL --output trivy-image-report.txt "$ECR_REPO:$IMAGE_TAG"'
             }
             post {
                 always {
@@ -165,45 +127,94 @@ pipeline {
         }
 
         // -----------------------------------------------------------------------
-        // PUSH - main branch only
+        // RELEASE
         // -----------------------------------------------------------------------
         stage('Push to ECR') {
             steps {
                 sh '''
-                    aws ecr get-login-password --region ${AWS_REGION} | \
-                    docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                    docker push ${ECR_REPO}:${IMAGE_TAG}
+                    aws ecr get-login-password --region "$AWS_REGION" | \
+                        docker login --username AWS --password-stdin "$ECR_REGISTRY"
+                    docker push "$ECR_REPO:$IMAGE_TAG"
                 '''
             }
         }
 
-        // -----------------------------------------------------------------------
-        // DEPLOY - main branch only
-        // -----------------------------------------------------------------------
+        // Registers a new task definition revision pinned to the immutable build tag,
+        // then points the service at it. Skipped if the app layer isn't provisioned yet.
         stage('Deploy to ECS') {
             steps {
-                sh '''
-                    aws ecs update-service \
-                        --cluster ${ECS_CLUSTER} \
-                        --service ${ECS_SERVICE} \
-                        --force-new-deployment \
-                        --region ${AWS_REGION}
-                '''
+                script {
+                    // Currently running (known-good) revision = rollback target
+                    def current = sh(returnStdout: true, script: '''
+                        aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --region "$AWS_REGION" \
+                            --query "services[?status=='ACTIVE'].taskDefinition | [0]" --output text 2>/dev/null || echo None
+                    ''').trim()
+
+                    if (!current || current == 'None') {
+                        echo "Service ${ECS_SERVICE} not found - image published; run 'terraform apply' in terraform/app to bootstrap."
+                        return
+                    }
+                    env.PREVIOUS_TASK_DEF = current
+
+                    // Clone latest revision of the family, swap the image, register it
+                    env.NEW_TASK_DEF = sh(returnStdout: true, script: '''
+                        set -eu
+                        aws ecs describe-task-definition --task-definition "$TASK_FAMILY" --region "$AWS_REGION" --query taskDefinition \
+                          | jq --arg IMAGE "$ECR_REPO:$IMAGE_TAG" '
+                                .containerDefinitions |= map(if .name == "app" then .image = $IMAGE else . end)
+                                | del(.taskDefinitionArn, .revision, .status, .requiresAttributes,
+                                      .compatibilities, .registeredAt, .registeredBy, .deregisteredAt)' \
+                          > task-definition.json
+                        aws ecs register-task-definition --cli-input-json file://task-definition.json --region "$AWS_REGION" \
+                            --query 'taskDefinition.taskDefinitionArn' --output text
+                    ''').trim()
+
+                    echo "Deploying ${env.NEW_TASK_DEF} (rollback target: ${env.PREVIOUS_TASK_DEF})"
+                    sh 'aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" --task-definition "$NEW_TASK_DEF" --region "$AWS_REGION" > /dev/null'
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'task-definition.json', allowEmptyArchive: true
+                }
             }
         }
 
         stage('Verify Deployment') {
-            options {
-                timeout(time: 10, unit: 'MINUTES')
-            }
+            when { expression { env.NEW_TASK_DEF != null } }
             steps {
-                sh '''
-                    aws ecs wait services-stable \
-                        --cluster ${ECS_CLUSTER} \
-                        --services ${ECS_SERVICE} \
-                        --region ${AWS_REGION}
-                    echo "Service is stable - deployment verified"
-                '''
+                // Marks the build FAILED but continues, so the Rollback stage can run
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    timeout(time: 10, unit: 'MINUTES') {
+                        sh '''
+                            set -eu
+                            aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --region "$AWS_REGION"
+
+                            # A circuit-breaker rollback also ends "stable" - confirm OUR revision is running
+                            RUNNING=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --region "$AWS_REGION" \
+                                --query "services[0].deployments[?status=='PRIMARY'].taskDefinition | [0]" --output text)
+                            [ "$RUNNING" = "$NEW_TASK_DEF" ] || { echo "Unhealthy: running $RUNNING, expected $NEW_TASK_DEF"; exit 1; }
+                            echo "Service is stable on $RUNNING"
+                        '''
+                    }
+                }
+            }
+        }
+
+        // Restores the previous revision and deregisters the bad one so it can't be redeployed
+        stage('Rollback') {
+            when { expression { env.NEW_TASK_DEF != null && currentBuild.currentResult == 'FAILURE' } }
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    sh '''
+                        set -eu
+                        echo "Rolling back: $NEW_TASK_DEF -> $PREVIOUS_TASK_DEF"
+                        aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" --task-definition "$PREVIOUS_TASK_DEF" --region "$AWS_REGION" > /dev/null
+                        aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --region "$AWS_REGION"
+                        aws ecs deregister-task-definition --task-definition "$NEW_TASK_DEF" --region "$AWS_REGION" > /dev/null
+                        echo "Rollback complete - running $PREVIOUS_TASK_DEF"
+                    '''
+                }
             }
         }
     }
@@ -222,7 +233,7 @@ pipeline {
         }
         always {
             // Remove local Docker image to free disk space on agent
-            sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} || true"
+            sh 'docker rmi "$ECR_REPO:$IMAGE_TAG" || true'
             // Wipe the workspace to prevent stale artifact accumulation
             cleanWs()
         }
