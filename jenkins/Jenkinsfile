@@ -10,8 +10,8 @@ pipeline {
     environment {
         AWS_REGION          = 'us-east-1'
         AWS_ACCOUNT_ID      = credentials('aws-account-id')
-        ECS_CLUSTER         = 'ecs-project-cluster'
-        ECS_SERVICE         = 'ecs-project-service'
+        ECS_CLUSTER         = 'ecs-project-dev-cluster'
+        ECS_SERVICE         = 'ecs-project-dev-service'
         ECR_REPO_NAME       = 'ecs-project'
         SONAR_PROJECT_KEY   = 'TanyaRoy1708_ecs-deployment-devopstoolbox'
     }
