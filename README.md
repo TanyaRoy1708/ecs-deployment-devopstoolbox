@@ -146,15 +146,7 @@ terraform apply -auto-approve
 ```
 *Note: The Jenkins EC2 instance automatically installs Jenkins, Docker, Trivy, and Grafana on first boot via `scripts/setup-jenkins.sh` in its EC2 user data.*
 
-#### 3. Deploy Layer 2 (Application Runtime)
-Provisions the ALB, ECS Fargate cluster, tasks, and auto-scaling rules:
-```bash
-cd ../app
-terraform init
-terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
-```
-
-#### 4. Configure SonarCloud (SaaS)
+#### 3. Configure SonarCloud (SaaS)
 SonarCloud is free for public repositories - zero servers to manage:
 1. Sign up at [sonarcloud.io](https://sonarcloud.io) with your GitHub account.
 2. Import this repository and note your **Organization Key**.
@@ -165,10 +157,21 @@ SonarCloud is free for public repositories - zero servers to manage:
    - Auth token: paste your token
 5. In Jenkins → Tools → **SonarQube Scanner**: add and enable auto-install.
 
-#### 5. Run the Jenkins Pipeline
+#### 4. Run the Jenkins Pipeline (first run publishes the image)
 1. In Jenkins, create a new Pipeline job pointing to this repository (`*/main`, `jenkins/Jenkinsfile`).
 2. Add `aws-account-id` as a Global Secret Text credential.
-3. Push code to `main` - the pipeline will automatically test, scan with SonarCloud, run Trivy CVE scans, build Docker image, push to ECR, and deploy to ECS.
+3. Run the pipeline. On the first run the ECS service does not exist yet, so the pipeline tests, scans, builds and pushes an immutable image (`<build>-<git-sha>`) to ECR, then **skips deployment**.
+
+#### 5. Deploy Layer 2 (Application Runtime)
+Provisions the ALB, ECS Fargate cluster, tasks, and auto-scaling rules. The bootstrap task definition pins the most recently pushed ECR image **by digest** (or pass `-var image_tag=<build-tag>`):
+```bash
+cd ../app
+terraform init
+terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
+```
+From now on, every push to `main` registers a new task definition revision pinned to the build tag and rolls it out. Terraform ignores `task_definition` on the service, so infra applies never revert a release.
+
+**Rollback:** `aws ecs update-service --cluster ecs-project-dev-cluster --service ecs-project-dev-service --task-definition ecs-project-dev-task:<previous-revision>` (failed deployments are also rolled back automatically by the ECS deployment circuit breaker).
 
 #### 6. Grafana Monitoring
 1. Open Grafana at `http://<jenkins-ec2-ip>:3000` (default: `admin/admin`).
