@@ -8,7 +8,7 @@ sleep 30
 
 # 2. Update OS and install prerequisites
 sudo apt-get update -y
-sudo apt-get install -y fontconfig openjdk-21-jre curl unzip git
+sudo apt-get install -y fontconfig openjdk-21-jre curl unzip git jq
 
 # 3. Add Jenkins Repo and install Jenkins
 sudo mkdir -p /etc/apt/keyrings

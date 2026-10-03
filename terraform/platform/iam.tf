@@ -33,9 +33,9 @@ resource "aws_iam_policy" "jenkins_deployer_policy" {
       },
       # 2. Push image to THIS repository only
       {
-        Sid      = "ECRPushImages"
-        Effect   = "Allow"
-        Action   = [
+        Sid    = "ECRPushImages"
+        Effect = "Allow"
+        Action = [
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
@@ -48,9 +48,9 @@ resource "aws_iam_policy" "jenkins_deployer_policy" {
       },
       # 3. Trigger deployment & wait for stability on ECS clusters/services
       {
-        Sid      = "ECSUpdateService"
-        Effect   = "Allow"
-        Action   = [
+        Sid    = "ECSUpdateService"
+        Effect = "Allow"
+        Action = [
           "ecs:UpdateService",
           "ecs:DescribeServices"
         ]
@@ -58,6 +58,27 @@ resource "aws_iam_policy" "jenkins_deployer_policy" {
           "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:service/${var.project}*/*",
           "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.project}*"
         ]
+      },
+      # 4. Register a new task definition revision per build (these actions do not support resource-level scoping)
+      {
+        Sid    = "ECSTaskDefinitions"
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition",
+          "ecs:DeregisterTaskDefinition"
+        ]
+        Resource = "*"
+      },
+      # 5. Allow handing the task execution role to ECS when registering revisions
+      {
+        Sid      = "PassECSTaskExecutionRole"
+        Effect   = "Allow"
+        Action   = ["iam:PassRole"]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project}-*-ecs-task-execution-role"
+        Condition = {
+          StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" }
+        }
       }
     ]
   })

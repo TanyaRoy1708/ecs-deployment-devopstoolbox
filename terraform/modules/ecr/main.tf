@@ -1,6 +1,6 @@
 resource "aws_ecr_repository" "app" {
   name                 = var.project
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE" # A pushed tag can never be overwritten (no ':latest' drift)
   force_delete         = true
 
   image_scanning_configuration {
