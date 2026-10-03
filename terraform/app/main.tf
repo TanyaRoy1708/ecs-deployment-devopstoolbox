@@ -33,6 +33,19 @@ locals {
   private_subnet_ids = length(var.private_subnet_ids) > 0 ? var.private_subnet_ids : data.terraform_remote_state.platform.outputs.private_subnet_ids
   ecr_repo_url       = var.ecr_repo_url != "" ? var.ecr_repo_url : data.terraform_remote_state.platform.outputs.ecr_repository_url
   name_prefix        = "${var.project}-${var.environment}"
+  ecr_repo_name      = element(split("/", local.ecr_repo_url), 1)
+
+  # Immutable image reference for the bootstrap task definition:
+  #   - explicit build tag if provided, otherwise
+  #   - most recently pushed image pinned by sha256 digest
+  container_image = var.image_tag != "" ? "${local.ecr_repo_url}:${var.image_tag}" : "${local.ecr_repo_url}@${data.aws_ecr_image.bootstrap[0].image_digest}"
+}
+
+# Looks up the newest image in ECR (requires at least one pipeline push beforehand)
+data "aws_ecr_image" "bootstrap" {
+  count           = var.image_tag == "" ? 1 : 0
+  repository_name = local.ecr_repo_name
+  most_recent     = true
 }
 
 # -----------------------------------------------------------------------------
@@ -58,7 +71,6 @@ module "ecs" {
   private_subnet_ids   = local.private_subnet_ids
   ecs_sg_id            = aws_security_group.ecs.id
   alb_target_group_arn = module.alb.target_group_arn
-  ecr_repo_url         = local.ecr_repo_url
   app_port             = var.app_port
-  image_tag            = var.image_tag
+  container_image      = local.container_image
 }

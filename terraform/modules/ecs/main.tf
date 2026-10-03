@@ -1,7 +1,7 @@
 resource "aws_ecs_cluster" "main" {
   name = "${var.project}-cluster"
   setting {
-    name  = "containerInsights" 
+    name  = "containerInsights"
     value = "enabled"
   }
 }
@@ -39,9 +39,11 @@ resource "aws_ecs_task_definition" "app" {
   memory                   = 512
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
+  # Image is only used for the initial (bootstrap) revision.
+  # Subsequent revisions are registered by the CI/CD pipeline with an immutable build tag.
   container_definitions = jsonencode([{
     name      = "app"
-    image     = "${var.ecr_repo_url}:${var.image_tag}"
+    image     = var.container_image
     essential = true
     portMappings = [{
       containerPort = var.app_port
@@ -75,6 +77,19 @@ resource "aws_ecs_service" "app" {
     target_group_arn = var.alb_target_group_arn
     container_name   = "app"
     container_port   = var.app_port
+  }
+
+  # Automatically roll back to the last healthy task definition if a deployment fails
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  lifecycle {
+    ignore_changes = [
+      task_definition, # Owned by CI/CD: Jenkins registers a new revision per build
+      desired_count,   # Owned by Application Auto Scaling
+    ]
   }
 }
 

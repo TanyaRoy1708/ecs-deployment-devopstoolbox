@@ -23,9 +23,18 @@ variable "app_port" {
 }
 
 variable "image_tag" {
-  description = "Docker image tag to deploy"
+  description = <<-EOT
+    Immutable image tag (e.g. "12-a1b2c3d") used ONLY for the bootstrap task definition.
+    Leave empty to pin the most recently pushed ECR image by digest.
+    After bootstrap, Jenkins owns rollouts by registering new task definition revisions.
+  EOT
   type        = string
-  default     = "latest"
+  default     = ""
+
+  validation {
+    condition     = lower(var.image_tag) != "latest"
+    error_message = "Mutable tag 'latest' is not allowed. Use an immutable build tag or leave empty."
+  }
 }
 
 # -----------------------------------------------------------------------------
