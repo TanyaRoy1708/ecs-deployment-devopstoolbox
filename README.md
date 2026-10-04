@@ -16,7 +16,7 @@ A production-grade DevOps portfolio project demonstrating a complete CI/CD lifec
 > 📸 **[View full project screenshots and visual walkthrough →](./docs/SHOWCASE.md)**
 
 <p align="center">
-  <img src="./docs/screenshots/infrastructure/diagram.png" alt="DevOps Toolbox End-to-End AWS Architecture" width="100%"/>
+  <img src="./docs/screenshots/infrastructure/architecture-diagram.png" alt="DevOps Toolbox End-to-End AWS Architecture" width="100%"/>
 </p>
 
 

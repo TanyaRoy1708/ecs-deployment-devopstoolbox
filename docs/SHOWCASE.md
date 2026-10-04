@@ -116,6 +116,6 @@ A pre-built Grafana dashboard monitors the live application using CloudWatch as 
 ## Architecture Diagram
 
 <p align="center">
-  <img src="./screenshots/infrastructure/diagram.png" alt="Architecture Diagram" width="100%"/>
+  <img src="./screenshots/infrastructure/architecture-diagram.png" alt="Architecture Diagram" width="100%"/>
 </p>
 
