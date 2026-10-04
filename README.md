@@ -36,7 +36,7 @@ A production-grade DevOps portfolio project demonstrating a complete CI/CD lifec
 
 ---
 
-## Repository Structure
+## Repository  Structure
 
 ```text
 .
