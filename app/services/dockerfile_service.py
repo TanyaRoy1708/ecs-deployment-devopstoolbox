@@ -1,7 +1,7 @@
 """
 Dockerfile linter service.
 
-Rules checked (interview-ready list):
+Rules checked:
   DF001  FROM uses 'latest' tag          — unpinned base image, non-reproducible builds
   DF002  No USER instruction             — container runs as root, security risk
   DF003  apt-get install without -y      — blocks on interactive prompt in CI

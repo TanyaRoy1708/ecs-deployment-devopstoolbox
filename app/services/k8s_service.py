@@ -1,7 +1,7 @@
 """
 K8s Manifest Explainer service.
 
-Supported manifest kinds (interview-ready scope):
+Supported manifest kinds:
   - Deployment    — workload, replicas, image, resource limits, liveness/readiness probes
   - Service       — type (ClusterIP/NodePort/LoadBalancer), selector, ports
   - ConfigMap     — data keys count, namespace
