@@ -1,199 +1,317 @@
-# DevOps Toolbox — AWS ECS Fargate Deployment
+<div align="center">
 
-![ECS](https://img.shields.io/badge/Amazon_ECS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Fargate](https://img.shields.io/badge/AWS_Fargate-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Terraform](https://img.shields.io/badge/Terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
-![Jenkins](https://img.shields.io/badge/Jenkins-%232C5263.svg?style=for-the-badge&logo=jenkins&logoColor=white)
-![SonarCloud](https://img.shields.io/badge/SonarCloud-F3702A?style=for-the-badge&logo=sonarcloud&logoColor=white)
-![Trivy](https://img.shields.io/badge/Trivy-1904DA?style=for-the-badge&logo=aqua&logoColor=white)
-![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
-![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+# 🚀 DevOps Toolbox — Zero-Downtime CI/CD to AWS ECS Fargate
 
-A production-grade DevOps portfolio project demonstrating a complete CI/CD lifecycle — from containerized application to automated AWS ECS Fargate deployment, with integrated security scanning and observability.
+**From `git push` to a production-grade container rollout in private subnets, with quality gates, CVE scanning, auto-rollback and live observability, all built as code.**
 
-> 📸 **[View full project screenshots and visual walkthrough →](./docs/SHOWCASE.md)**
+[![AWS ECS](https://img.shields.io/badge/AWS_ECS_Fargate-FF9900?style=for-the-badge&logo=amazonecs&logoColor=white)](#)
+[![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](./terraform)
+[![Jenkins](https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](./jenkins/Jenkinsfile)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](./app/Dockerfile)
+[![SonarCloud](https://img.shields.io/badge/SonarCloud-F3702A?style=for-the-badge&logo=sonarcloud&logoColor=white)](./app/sonar-project.properties)
+[![Trivy](https://img.shields.io/badge/Trivy-1904DA?style=for-the-badge&logo=aqua&logoColor=white)](#devsecops)
+[![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)](./monitoring)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](./app)
 
-<p align="center">
-  <img src="./docs/screenshots/infrastructure/architecture-diagram.png" alt="DevOps Toolbox End-to-End AWS Architecture" width="100%"/>
-</p>
+[**📸 Visual Walkthrough**](./docs/SHOWCASE.md) · [**🏗️ Terraform Design**](./terraform/README.md) · [**⚙️ Pipeline**](./jenkins/Jenkinsfile) · [**📊 Dashboard**](./monitoring/grafana-dashboard.json)
 
+<img src="./docs/screenshots/infrastructure/architecture-diagram.png" alt="End-to-end AWS architecture: Jenkins CI/CD, ECR, ALB, ECS Fargate in private subnets, CloudWatch and Grafana" width="100%"/>
+
+</div>
 
 ---
 
-## What This Project Demonstrates
+## ⚡ TL;DR
 
-| Pillar | Implementation |
+| | |
 |---|---|
-| **Infrastructure as Code** | Two-Layer Terraform (Platform: VPC, NAT Gateway, ECR, Jenkins EC2; Application: ECS Fargate, ALB, Auto Scaling) |
-| **CI/CD Automation** | Jenkins Declarative Pipeline (Build → Scan → Push → Deploy) |
-| **DevSecOps** | SonarCloud SAST + Aqua Trivy CVE scanning before every deployment |
-| **Container Orchestration** | AWS ECS Fargate with target-tracking auto-scaling (2 to 4 tasks) |
-| **Observability** | Grafana dashboards on top of CloudWatch metrics (CPU, Memory, 5xx) |
-| **Security & Isolation** | Private subnets for ECS tasks behind NAT Gateway, SG-to-SG mutual ingress, IAM instance profile (no static credentials) |
-| **State Management** | S3 Native State Locking (`use_lockfile = true`, zero DynamoDB) with isolated state files for platform and app |
+| 🎯 **What** | End-to-end delivery platform for a Python FastAPI app (4 DevOps utilities) on **AWS ECS Fargate** |
+| 🏗️ **IaC** | **Terraform**: 4 reusable modules, **two-layer state isolation** (platform / app), `dev` + `prod` environments |
+| 🔁 **CI/CD** | **Jenkins** declarative pipeline, **12 stages**: test → quality gate → scan → build → push → approve → deploy → verify → rollback |
+| 🛡️ **Security** | SonarCloud SAST + Quality Gate, Trivy FS & image scans, ECR scan-on-push, private subnets, IAM roles with **zero static keys** |
+| 🔄 **Releases** | **Immutable** `<build>-<git-sha>` tags, task definitions pinned per build, **automatic rollback** (pipeline + ECS circuit breaker) |
+| 📈 **Ops** | Target-tracking autoscaling (**2 → 4 tasks @ 70% CPU**), CloudWatch alarms, **9-panel Grafana** dashboard |
+| 💰 **FinOps** | Full stack runs for **~$95/month**, with scripted teardown |
 
 ---
 
-## Repository  Structure
+## 🧭 Table of Contents
+
+- [Pipeline Flow](#cicd-pipeline-flow)
+- [Engineering Highlights](#engineering-highlights)
+- [Tech Stack](#tech-stack)
+- [Screenshots](#screenshots)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Cost Breakdown](#cost-breakdown)
+- [Challenges & Lessons Learned](#challenges--lessons-learned)
+- [Roadmap](#roadmap)
+
+---
+
+## <a id="cicd-pipeline-flow"></a>🔁 CI/CD Pipeline Flow
+
+```mermaid
+flowchart LR
+    A([git push]) --> B[Unit Tests<br/>+ Coverage]
+    B --> C[SonarCloud<br/>SAST]
+    C --> D{Quality<br/>Gate}
+    D -- fail --> X([❌ Abort])
+    D -- pass --> E[Trivy<br/>FS Scan]
+    E --> F[Docker Build<br/>multi-stage]
+    F --> G[Trivy<br/>Image Scan]
+    G --> H[Push to ECR<br/>immutable tag]
+    H --> I{prod?}
+    I -- yes --> J[/Manual<br/>Approval/]
+    I -- no --> K
+    J --> K[Register Task Def<br/>+ Update Service]
+    K --> L{Verify<br/>Stable?}
+    L -- yes --> M([✅ Live])
+    L -- no --> N[Auto Rollback<br/>+ Deregister bad rev]
+```
+
+Every report (JUnit, coverage, Trivy FS/image, rendered task definition) is **archived as a build artifact** for audit.
+
+---
+
+## <a id="engineering-highlights"></a>🌟 Engineering Highlights
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🏗️ Two-Layer Terraform
+- **Platform layer** (deploy once): VPC, NAT, ECR, Jenkins EC2 + IAM
+- **App layer** (per env): ALB, ECS cluster/service, autoscaling, SGs
+- App reads platform outputs via `terraform_remote_state`
+- **Blast-radius isolation**: a failed app apply can't touch networking
+- **S3 native state locking** (`use_lockfile`), no DynamoDB needed
+
+</td>
+<td width="50%" valign="top">
+
+### 🔄 Safe, Traceable Releases
+- ECR set to **`IMMUTABLE`** tags, no `:latest` drift
+- Tag = `BUILD_NUMBER-gitSHA` → any running task traces to a commit
+- Pipeline clones the task def with `jq` and pins the new image
+- Terraform `ignore_changes` on `task_definition`, so infra applies **never revert a release**
+- **Dual rollback**: pipeline verify-stage + ECS deployment circuit breaker
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### <a id="devsecops"></a>🛡️ DevSecOps (Shift-Left)
+- **SonarCloud** SAST, with the pipeline aborting on Quality Gate failure
+- **Trivy** scans dependencies *and* the final image (HIGH/CRITICAL)
+- **ECR scan-on-push** as a second line of defence
+- Multi-stage Dockerfile, **non-root user**, `HEALTHCHECK`, `.dockerignore`
+- ECS tasks in **private subnets**, `assign_public_ip = false`
+- **SG-to-SG** rule: only the ALB can reach port 8000
+
+</td>
+<td valign="top">
+
+### 📈 Reliability & Observability
+- **2–4 Fargate tasks** with target-tracking scaling on CPU
+- ALB health checks + container `HEALTHCHECK` on `/health`
+- **Container Insights** + CloudWatch CPU alarm (>80%)
+- Grafana dashboard: tasks, healthy hosts, CPU/mem, requests, **5xx**, **p99 latency**
+- Grafana authenticates through the **EC2 IAM role**, so it needs no keys
+- Pipeline guardrails: timeouts, no concurrent builds, log rotation
+
+</td>
+</tr>
+</table>
+
+---
+
+## <a id="tech-stack"></a>🧰 Tech Stack
+
+| Category | Tools |
+|---|---|
+| **Cloud** | AWS: ECS Fargate, ECR, ALB, VPC, NAT Gateway, EC2, IAM, S3, CloudWatch, Application Auto Scaling |
+| **IaC** | Terraform (modules, remote state, per-environment `tfvars`) |
+| **CI/CD** | Jenkins (Declarative Pipeline, parameterised environments, approval gate) |
+| **Containers** | Docker (multi-stage builds), Docker Compose |
+| **Security** | SonarCloud, Aqua Trivy, ECR image scanning, IAM least-privilege roles |
+| **Observability** | Grafana, CloudWatch Metrics, Container Insights, CloudWatch Logs |
+| **App & Testing** | Python 3.11, FastAPI, Jinja2, Pytest + coverage |
+| **Scripting** | Bash (backend bootstrap/cleanup, Jenkins host provisioning) |
+
+---
+
+## <a id="screenshots"></a>📸 Screenshots
+
+> Full annotated walkthrough → **[docs/SHOWCASE.md](./docs/SHOWCASE.md)**
+
+<table>
+<tr>
+<td width="50%"><img src="./docs/screenshots/pipeline/jenkins-pipeline.png" alt="Jenkins pipeline stages"/><p align="center"><b>Jenkins Pipeline: all stages green</b></p></td>
+<td width="50%"><img src="./docs/screenshots/monitoring/grafana-dashboard.png" alt="Grafana dashboard"/><p align="center"><b>Grafana: live ECS & ALB metrics</b></p></td>
+</tr>
+<tr>
+<td><img src="./docs/screenshots/infrastructure/ecs-project-service.png" alt="ECS service"/><p align="center"><b>ECS Fargate Service</b></p></td>
+<td><img src="./docs/screenshots/security/trivy-scan.png" alt="Trivy scan"/><p align="center"><b>Trivy CVE Scan Report</b></p></td>
+</tr>
+</table>
+
+---
+
+## <a id="repository-structure"></a>📁 Repository Structure
 
 ```text
 .
-├── app/                        # FastAPI Python application
-│   ├── main.py                 # Entrypoint & /health route
-│   ├── Dockerfile              # Multi-stage build, non-root user
-│   ├── .dockerignore           # Prevents sensitive files leaking into image
-│   ├── sonar-project.properties# SonarCloud static analysis config
-│   ├── routers/                # API route handlers (CIDR, Cron, K8s, Dockerfile)
-│   ├── services/               # Core business logic
-│   ├── static/                 # CSS & static assets
-│   ├── templates/              # Jinja2 HTML templates
-│   └── tests/                  # Pytest unit tests & coverage
+├── app/                         # FastAPI application (containerised)
+│   ├── main.py                  # Entrypoint + /health endpoint
+│   ├── routers/ services/       # CIDR, Cron, K8s manifest, Dockerfile linter
+│   ├── templates/ static/       # Jinja2 UI
+│   ├── tests/                   # Pytest suite (11 tests)
+│   ├── Dockerfile               # Multi-stage, non-root, HEALTHCHECK
+│   └── sonar-project.properties # SonarCloud config
 ├── terraform/
-│   ├── README.md               # Detailed Two-Layer Architecture guide
-│   ├── platform/               # Layer 1: Platform Foundations (Deploy Once)
-│   │   ├── main.tf             # Networking & ECR module calls
-│   │   ├── iam.tf              # Jenkins EC2 IAM role & deployer policy
-│   │   ├── jenkins.tf          # Jenkins EC2 instance & Security Group
-│   │   ├── variables.tf        # Platform inputs
-│   │   ├── outputs.tf          # Outputs exported for Layer 2 (VPC ID, subnets, ECR)
-│   │   └── backend.tf.example  # S3 backend template (key: platform/terraform.tfstate)
-│   ├── app/                    # Layer 2: Application Runtime (Per Environment)
-│   │   ├── main.tf             # Reads platform state, provisions ALB & ECS
-│   │   ├── security.tf         # ALB & ECS Security Groups
-│   │   ├── variables.tf        # Application variables & overrides
-│   │   ├── outputs.tf          # ALB DNS endpoint
-│   │   ├── backend.tf.example  # S3 backend template (key: app/dev/terraform.tfstate)
-│   │   └── environments/
-│   │       ├── dev/            # Dev environment tfvars
-│   │       └── prod/           # Prod environment tfvars
-│   └── modules/                # Shared reusable Terraform modules
-│       ├── networking/         # VPC, Public & Private Subnets, NAT GW, IGW
-│       ├── alb/                # Application Load Balancer & Target Group
-│       ├── ecs/                # ECS Cluster, Task Definition, Service, Auto Scaling
-│       └── ecr/                # ECR Repository & Lifecycle Policies
-├── jenkins/
-│   └── Jenkinsfile             # Declarative pipeline definition
-├── scripts/
-│   ├── bootstrap-backend.sh    # S3 state bucket bootstrap with native locking
-│   ├── cleanup-backend.sh      # Tears down remote state bucket & versions
-│   └── setup-jenkins.sh        # Automated bootstrap for Jenkins, Docker, Trivy, Grafana
-├── monitoring/
-│   └── grafana-dashboard.json  # Pre-built CloudWatch dashboard template
-└── docs/
-    ├── SHOWCASE.md             # Visual walkthrough with screenshots
-    └── screenshots/
+│   ├── platform/                # Layer 1: VPC, NAT, ECR, Jenkins EC2, IAM
+│   ├── app/                     # Layer 2: ALB, ECS, autoscaling, SGs
+│   │   └── environments/{dev,prod}/
+│   └── modules/                 # networking · alb · ecs · ecr
+├── jenkins/Jenkinsfile          # 12-stage declarative pipeline
+├── monitoring/                  # Grafana dashboard (JSON, importable)
+├── scripts/                     # State bootstrap/cleanup, Jenkins host setup
+├── docs/
+│   ├── SHOWCASE.md              # Visual walkthrough
+│   └── screenshots/             # application · pipeline · security · infrastructure · monitoring
+└── docker-compose.yml           # Local development
 ```
 
 ---
 
-## Architectural Design: Two-Layer Platform Isolation & Private Subnets
+## <a id="getting-started"></a>🚀 Getting Started
 
-### 1. Two-Layer Infrastructure Isolation
-To protect critical foundations from deployment churn, Terraform is structured into two independently deployed layers:
-- **Layer 1 (Platform):** Provisions foundational VPC, NAT Gateway, ECR registry, and the Jenkins server with dedicated S3 state (`platform/terraform.tfstate`). Deployed once by platform administrators and rarely modified.
-- **Layer 2 (Application):** Provisions the ALB, ECS Fargate cluster, tasks, security groups, and auto-scaling policies with separate S3 state (`app/dev/terraform.tfstate`). It dynamically queries Layer 1 outputs via `terraform_remote_state`.
-- **Blast Radius Protection:** An application deployment error or state lock issue in the CI/CD pipeline can never corrupt or tear down VPC networking, NAT gateways, or container registries.
-
-### 2. Network Isolation & Defense-in-Depth
-- **Public Subnets:** Only host the Internet-facing Application Load Balancer, the NAT Gateway, and the Jenkins server.
-- **Private Subnets:** ECS Fargate tasks run in private subnets with `assign_public_ip = false`. Direct inbound access from the Internet is completely blocked.
-- **Outbound Egress:** Tasks pull images from ECR and stream logs to CloudWatch securely via the NAT Gateway.
-- **Mutual Security Groups:** The ECS security group strictly allows inbound traffic on port 8000 *only* from the ALB security group ID.
-
----
-
-## FinOps - Cost Estimate
-
-| Resource | Specification | Est. Monthly Cost |
-|---|---|---|
-| Application Load Balancer | 1 ALB (us-east-1) | ~$16.00 |
-| ECS Fargate | 2 Tasks × (0.25 vCPU, 0.5 GB) | ~$16.00 |
-| Jenkins & Grafana Server | 1 EC2 t3.medium | ~$30.40 |
-| NAT Gateway | 1 Single-AZ NAT Gateway | ~$32.00 |
-| S3 Remote State | S3 Native Locking (zero DynamoDB) | ~$0.10 |
-| **Total** | | **~$94.50 / month** |
-
-> Estimates based on `us-east-1` on-demand pricing. Costs vary by region and usage.
-
----
-
-## Quick Start
-
-### Local Development
+### Run locally (≈30 seconds)
 
 ```bash
-docker-compose up --build
-# App: http://localhost:8000
-# Health: http://localhost:8000/health
+docker compose up --build
+# App    → http://localhost:8000
+# Health → http://localhost:8000/health
 ```
 
 ### Deploy to AWS
 
-#### 1. Bootstrap Remote State
-Initializes the S3 state bucket and generates `backend.tf` for both layers using S3 native state locking:
-```bash
-./scripts/bootstrap-backend.sh
-```
+<details>
+<summary><b>Prerequisites</b></summary>
 
-#### 2. Deploy Layer 1 (Platform Foundation)
-Provisions the VPC, NAT Gateway, ECR repository, and the Jenkins EC2 instance:
+- AWS account + CLI configured · Terraform ≥ 1.10 (for S3 native locking) · Docker
+- SonarCloud account (free for public repos)
+
+</details>
+
+<details>
+<summary><b>1️⃣ Bootstrap remote state</b></summary>
+
+```bash
+./scripts/bootstrap-backend.sh   # creates S3 bucket + generates backend.tf for both layers
+```
+</details>
+
+<details>
+<summary><b>2️⃣ Deploy the platform layer</b> (VPC, NAT, ECR, Jenkins)</summary>
+
 ```bash
 cd terraform/platform
-terraform init
-terraform apply -auto-approve
+terraform init && terraform apply
 ```
-*Note: The Jenkins EC2 instance automatically installs Jenkins, Docker, Trivy, and Grafana on first boot via `scripts/setup-jenkins.sh` in its EC2 user data.*
+The Jenkins EC2 user-data runs [`setup-jenkins.sh`](./scripts/setup-jenkins.sh), installing Jenkins, Docker, Trivy and Grafana automatically.
+</details>
 
-#### 3. Configure SonarCloud (SaaS)
-SonarCloud is free for public repositories - zero servers to manage:
-1. Sign up at [sonarcloud.io](https://sonarcloud.io) with your GitHub account.
-2. Import this repository and note your **Organization Key**.
-3. Generate a token: **My Account → Security → Global Analysis Token**.
-4. In Jenkins → Manage Jenkins → System → **SonarQube servers**:
-   - Name: `SonarCloud`
-   - Server URL: `https://sonarcloud.io`
-   - Auth token: paste your token
-5. In Jenkins → Tools → **SonarQube Scanner**: add and enable auto-install.
+<details>
+<summary><b>3️⃣ Configure Jenkins + SonarCloud</b></summary>
 
-#### 4. Run the Jenkins Pipeline (first run publishes the image)
-1. In Jenkins, create a new Pipeline job pointing to this repository (`*/main`, `jenkins/Jenkinsfile`).
-2. Add `aws-account-id` as a Global Secret Text credential.
-3. Run the pipeline. On the first run the ECS service does not exist yet, so the pipeline tests, scans, builds and pushes an immutable image (`<build>-<git-sha>`) to ECR, then **skips deployment**.
+1. On SonarCloud, import the repo and generate a token (**My Account → Security**).
+2. Jenkins → **System → SonarQube servers**: name `SonarCloud`, URL `https://sonarcloud.io`, token.
+3. Jenkins → **Tools → SonarQube Scanner**: name `sonar-scanner`, auto-install.
+4. Add a **Secret Text** credential `aws-account-id`.
+5. Create a Pipeline job → SCM: this repo, script path `jenkins/Jenkinsfile`.
+</details>
 
-#### 5. Deploy Layer 2 (Application Runtime)
-Provisions the ALB, ECS Fargate cluster, tasks, and auto-scaling rules. The bootstrap task definition pins the most recently pushed ECR image **by digest** (or pass `-var image_tag=<build-tag>`):
+<details>
+<summary><b>4️⃣ First pipeline run → deploy the app layer</b></summary>
+
+On the first run the ECS service doesn't exist yet, so the pipeline builds, scans and pushes the image, then **skips deploy**. Next:
+
 ```bash
-cd ../app
+cd terraform/app
 terraform init
-terraform apply -var-file="environments/dev/terraform.tfvars" -auto-approve
+terraform apply -var-file="environments/dev/terraform.tfvars"
 ```
-From now on, every push to `main` registers a new task definition revision pinned to the build tag and rolls it out. Terraform ignores `task_definition` on the service, so infra applies never revert a release.
+After this, every push to `main` performs a versioned rollout.
+</details>
 
-**Rollback:** `aws ecs update-service --cluster ecs-project-dev-cluster --service ecs-project-dev-service --task-definition ecs-project-dev-task:<previous-revision>` (failed deployments are also rolled back automatically by the ECS deployment circuit breaker).
+<details>
+<summary><b>5️⃣ Monitoring</b></summary>
 
-#### 6. Grafana Monitoring
-1. Open Grafana at `http://<jenkins-ec2-ip>:3000` (default: `admin/admin`).
-2. Add a **CloudWatch** data source (authenticates via the EC2 IAM Role automatically).
-3. Import `monitoring/grafana-dashboard.json` to monitor ECS CPU, memory, and Container Insights.
+1. Open Grafana at `http://<jenkins-ip>:3000`.
+2. Add a **CloudWatch** data source (IAM role auth).
+3. Import [`monitoring/grafana-dashboard.json`](./monitoring/grafana-dashboard.json).
+</details>
+
+<details>
+<summary><b>↩️ Manual rollback</b></summary>
+
+```bash
+aws ecs update-service --cluster ecs-project-dev-cluster \
+  --service ecs-project-dev-service \
+  --task-definition ecs-project-dev-task:<previous-revision>
+```
+</details>
+
+<details>
+<summary><b>🧹 Teardown</b></summary>
+
+```bash
+cd terraform/app      && terraform destroy -var-file="environments/dev/terraform.tfvars"
+cd ../platform        && terraform destroy
+cd ../..              && ./scripts/cleanup-backend.sh
+```
+</details>
 
 ---
 
-## Teardown
+## <a id="cost-breakdown"></a>💰 Cost Breakdown
 
-To destroy resources and avoid ongoing AWS charges:
+| Resource | Spec | Est. / month |
+|---|---|---|
+| Application Load Balancer | 1 ALB | ~$16.00 |
+| ECS Fargate | 2 × (0.25 vCPU, 0.5 GB) | ~$16.00 |
+| Jenkins + Grafana | 1 × EC2 `t3.medium` | ~$30.40 |
+| NAT Gateway | Single-AZ | ~$32.00 |
+| S3 remote state | Native locking, no DynamoDB | ~$0.10 |
+| **Total** | | **≈ $94.50** |
 
-```bash
-# 1. Destroy Application Layer
-cd terraform/app
-terraform destroy -var-file="environments/dev/terraform.tfvars" -auto-approve
+> `us-east-1` on-demand pricing. A single NAT is a deliberate cost trade-off; see [Roadmap](#roadmap).
 
-# 2. Destroy Platform Layer (including Jenkins EC2)
-cd ../platform
-terraform destroy -auto-approve
+---
 
-# 3. Clean up S3 State Bucket
-cd ../..
-./scripts/cleanup-backend.sh
-```
+## <a id="challenges--lessons-learned"></a>🧠 Challenges & Lessons Learned
+
+| Challenge | Solution |
+|---|---|
+| `terraform apply` kept reverting the image Jenkins had just deployed | Made CI/CD own `task_definition` via `lifecycle.ignore_changes`; Terraform only bootstraps the first revision |
+| ECS circuit-breaker rollbacks still reported **"stable"**, so bad deploys looked successful | Verify stage asserts the **PRIMARY** deployment equals the new revision, otherwise it triggers rollback |
+| Mutable `:latest` made it impossible to know what was running | Immutable ECR tags + `build-sha` versioning + per-build task definition revisions |
+| Chicken-and-egg: ECS service needs an image, the pipeline needs a service | Pipeline publishes the image and skips deploy when no service exists; Terraform pins the newest image **by digest** |
+| App changes risked breaking shared networking | Split Terraform into independent platform/app states |
+| Root-owned files from Dockerised tests broke workspace cleanup | Tests and cleanup both run inside containers |
+
+---
+
+## <a id="roadmap"></a>🗺️ Roadmap: Production Hardening
+
+Architectural improvements planned for enterprise-scale adoption:
+- [ ] **High Availability:** Multi-AZ NAT Gateways across all availability zones (eliminating single-AZ egress SPOF)
+- [ ] **Edge Security:** ACM SSL/TLS certificate termination on the ALB + AWS WAF (DDoS / rate-limiting)
+- [ ] **Deployment Strategy:** Blue/Green deployments using AWS CodeDeploy with canary traffic shifting
+- [ ] **Strict Security Gates:** Enforce Trivy blocking (`--exit-code 1`) on CRITICAL vulnerabilities
+- [ ] **ChatOps:** Automated Slack notifications for deployment status and circuit-breaker rollbacks
+- [ ] **GitOps Migration:** OIDC-based GitHub Actions or ArgoCD pipeline alternatives
+
