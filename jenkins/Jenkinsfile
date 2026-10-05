@@ -1,18 +1,24 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'prod'],
+            description: 'Target deployment environment'
+        )
+    }
+
     options {
-        timeout(time: 30, unit: 'MINUTES')           // Kill hung pipelines
-        disableConcurrentBuilds()                     // Prevent two concurrent builds
-        buildDiscarder(logRotator(numToKeepStr: '10')) // Keep only last 10 builds
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     environment {
         AWS_REGION     = 'us-east-1'
         AWS_ACCOUNT_ID = credentials('aws-account-id')
-        ECS_CLUSTER    = 'ecs-project-dev-cluster'
-        ECS_SERVICE    = 'ecs-project-dev-service'
-        TASK_FAMILY    = 'ecs-project-dev-task'
+        PROJECT_NAME   = 'ecs-project'
         ECR_REPO_NAME  = 'ecs-project'
     }
 
@@ -20,19 +26,27 @@ pipeline {
         stage('Initialize Pipeline') {
             steps {
                 script {
-                    // Versioned tag: "<build_number>-<git_short_sha>" for traceability & rollback
+                    env.TARGET_ENV  = params.ENVIRONMENT ?: 'dev'
+                    env.ECS_CLUSTER = "${env.PROJECT_NAME}-${env.TARGET_ENV}-cluster"
+                    env.ECS_SERVICE = "${env.PROJECT_NAME}-${env.TARGET_ENV}-service"
+                    env.TASK_FAMILY = "${env.PROJECT_NAME}-${env.TARGET_ENV}-task"
+
                     def gitShort     = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.IMAGE_TAG    = "${BUILD_NUMBER}-${gitShort}"
                     env.ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
                     env.ECR_REPO     = "${env.ECR_REGISTRY}/${ECR_REPO_NAME}"
-                    echo "Image: ${env.ECR_REPO}:${env.IMAGE_TAG}"
+
+                    echo "================================================="
+                    echo "Target Environment: ${env.TARGET_ENV}"
+                    echo "ECS Cluster:        ${env.ECS_CLUSTER}"
+                    echo "ECS Service:        ${env.ECS_SERVICE}"
+                    echo "Task Family:        ${env.TASK_FAMILY}"
+                    echo "Docker Image:       ${env.ECR_REPO}:${env.IMAGE_TAG}"
+                    echo "================================================="
                 }
             }
         }
 
-        // -----------------------------------------------------------------------
-        // TEST
-        // -----------------------------------------------------------------------
         stage('Run Unit Tests & Coverage') {
             steps {
                 dir('app') {
@@ -55,7 +69,6 @@ pipeline {
                     junit allowEmptyResults: true, testResults: 'app/test-results.xml'
                     archiveArtifacts artifacts: 'app/test-results.txt,app/coverage.xml', allowEmptyArchive: true
 
-                    // Safely clean root-owned Docker cache folders
                     dir('app') {
                         sh 'docker run --rm -v "$PWD":/app -w /app alpine rm -rf .pytest_cache tests/__pycache__ __pycache__ || true'
                     }
@@ -63,14 +76,9 @@ pipeline {
             }
         }
 
-        // -----------------------------------------------------------------------
-        // QUALITY GATE
-        // -----------------------------------------------------------------------
         stage('SonarCloud Analysis') {
             steps {
                 dir('app') {
-                    // sonar-project.properties declares projectKey, org, host, sources, and reports.
-                    // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_TOKEN automatically.
                     withSonarQubeEnv('SonarCloud') {
                         script {
                             def scannerHome = tool 'sonar-scanner'
@@ -87,16 +95,12 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                // Wait for SonarCloud to finish processing and evaluate gate status
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
         }
 
-        // -----------------------------------------------------------------------
-        // SECURITY SCANS (report-only; set --exit-code 1 to enforce)
-        // -----------------------------------------------------------------------
         stage('Trivy FS Scan') {
             steps {
                 sh 'trivy fs --exit-code 0 --ignore-unfixed --severity HIGH,CRITICAL --output trivy-fs-report.txt app'
@@ -110,7 +114,6 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                // Immutable build tag only - no mutable ':latest' (ECR repo is IMMUTABLE)
                 sh 'docker build -t "$ECR_REPO:$IMAGE_TAG" app'
             }
         }
@@ -126,9 +129,6 @@ pipeline {
             }
         }
 
-        // -----------------------------------------------------------------------
-        // RELEASE
-        // -----------------------------------------------------------------------
         stage('Push to ECR') {
             steps {
                 sh '''
@@ -139,12 +139,19 @@ pipeline {
             }
         }
 
-        // Registers a new task definition revision pinned to the immutable build tag,
-        // then points the service at it. Skipped if the app layer isn't provisioned yet.
+        stage('Approve Production Deployment') {
+            when { expression { env.TARGET_ENV == 'prod' } }
+            steps {
+                timeout(time: 15, unit: 'MINUTES') {
+                    input message: "Approve deployment of version ${env.IMAGE_TAG} to PRODUCTION?",
+                          ok: "Deploy to Prod"
+                }
+            }
+        }
+
         stage('Deploy to ECS') {
             steps {
                 script {
-                    // Currently running (known-good) revision = rollback target
                     def current = sh(returnStdout: true, script: '''
                         aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --region "$AWS_REGION" \
                             --query "services[?status=='ACTIVE'].taskDefinition | [0]" --output text 2>/dev/null || echo None
@@ -156,7 +163,6 @@ pipeline {
                     }
                     env.PREVIOUS_TASK_DEF = current
 
-                    // Clone latest revision of the family, swap the image, register it
                     env.NEW_TASK_DEF = sh(returnStdout: true, script: '''
                         set -eu
                         aws ecs describe-task-definition --task-definition "$TASK_FAMILY" --region "$AWS_REGION" --query taskDefinition \
@@ -183,14 +189,12 @@ pipeline {
         stage('Verify Deployment') {
             when { expression { env.NEW_TASK_DEF != null } }
             steps {
-                // Marks the build FAILED but continues, so the Rollback stage can run
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     timeout(time: 10, unit: 'MINUTES') {
                         sh '''
                             set -eu
                             aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --region "$AWS_REGION"
 
-                            # A circuit-breaker rollback also ends "stable" - confirm OUR revision is running
                             RUNNING=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --region "$AWS_REGION" \
                                 --query "services[0].deployments[?status=='PRIMARY'].taskDefinition | [0]" --output text)
                             [ "$RUNNING" = "$NEW_TASK_DEF" ] || { echo "Unhealthy: running $RUNNING, expected $NEW_TASK_DEF"; exit 1; }
@@ -201,7 +205,6 @@ pipeline {
             }
         }
 
-        // Restores the previous revision and deregisters the bad one so it can't be redeployed
         stage('Rollback') {
             when { expression { env.NEW_TASK_DEF != null && currentBuild.currentResult == 'FAILURE' } }
             steps {
@@ -221,20 +224,13 @@ pipeline {
 
     post {
         success {
-            echo "Deployment successful - Build #${BUILD_NUMBER} | Tag: ${IMAGE_TAG}"
-            // Uncomment below once Slack plugin is configured:
-            // slackSend channel: '#deployments', color: 'good',
-            //     message: "*${env.JOB_NAME}* #${BUILD_NUMBER} deployed successfully.\nTag: `${IMAGE_TAG}` | Branch: `${env.BRANCH_NAME}`\n${env.BUILD_URL}"
+            echo "Deployment successful - Build #${BUILD_NUMBER} | Environment: ${env.TARGET_ENV} | Tag: ${IMAGE_TAG}"
         }
         failure {
-            echo "Pipeline failed - Build #${BUILD_NUMBER} | Tag: ${IMAGE_TAG}"
-            // slackSend channel: '#deployments', color: 'danger',
-            //     message: "*${env.JOB_NAME}* #${BUILD_NUMBER} failed.\nBranch: `${env.BRANCH_NAME}` | Check: ${env.BUILD_URL}"
+            echo "Pipeline failed - Build #${BUILD_NUMBER} | Environment: ${env.TARGET_ENV} | Tag: ${IMAGE_TAG}"
         }
         always {
-            // Remove local Docker image to free disk space on agent
             sh 'docker rmi "$ECR_REPO:$IMAGE_TAG" || true'
-            // Wipe the workspace to prevent stale artifact accumulation
             cleanWs()
         }
     }
