@@ -11,13 +11,13 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY . .
 
-# Non-root user — Dockerfile linter best practice (and the app checks for this!)
+# Run as non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
 
 EXPOSE 8000
 
-# Health check matches /health endpoint in main.py
+# Container health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 

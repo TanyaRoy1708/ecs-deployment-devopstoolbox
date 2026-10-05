@@ -1,1 +1,1 @@
-# This file makes 'tests' a Python package so pytest can discover it.
+"""Unit and integration test package."""
