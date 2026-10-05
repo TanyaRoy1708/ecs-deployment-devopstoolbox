@@ -22,3 +22,13 @@ output "alb_target_group_arn" {
   description = "ARN of the ALB Target Group"
   value       = module.alb.target_group_arn
 }
+
+output "alb_arn_suffix" {
+  description = "ARN suffix of the ALB for CloudWatch and Grafana metrics"
+  value       = module.alb.alb_arn_suffix
+}
+
+output "target_group_arn_suffix" {
+  description = "ARN suffix of the Target Group for CloudWatch and Grafana metrics"
+  value       = module.alb.target_group_arn_suffix
+}

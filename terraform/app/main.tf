@@ -35,13 +35,9 @@ locals {
   name_prefix        = "${var.project}-${var.environment}"
   ecr_repo_name      = element(split("/", local.ecr_repo_url), 1)
 
-  # Immutable image reference for the bootstrap task definition:
-  #   - explicit build tag if provided, otherwise
-  #   - most recently pushed image pinned by sha256 digest
   container_image = var.image_tag != "" ? "${local.ecr_repo_url}:${var.image_tag}" : "${local.ecr_repo_url}@${data.aws_ecr_image.bootstrap[0].image_digest}"
 }
 
-# Looks up the newest image in ECR (requires at least one pipeline push beforehand)
 data "aws_ecr_image" "bootstrap" {
   count           = var.image_tag == "" ? 1 : 0
   repository_name = local.ecr_repo_name

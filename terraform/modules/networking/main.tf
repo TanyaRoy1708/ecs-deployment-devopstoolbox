@@ -1,12 +1,3 @@
-# =============================================================================
-# ARCHITECTURAL DECISION NOTE: Network Isolation & Defense-in-Depth
-# -----------------------------------------------------------------------------
-# - Public Subnets: Host the Internet-facing ALB and NAT Gateway.
-# - Private Subnets: Host ECS Fargate tasks with no public IPs (assign_public_ip=false).
-# - NAT Gateway: Routes outbound internet traffic (e.g. pulling Docker images from ECR,
-#   sending logs to CloudWatch) while completely preventing direct inbound internet traffic.
-# =============================================================================
-
 data "aws_availability_zones" "available" {
   state = "available"
 }

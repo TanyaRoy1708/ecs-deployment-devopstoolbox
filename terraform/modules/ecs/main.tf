@@ -39,8 +39,7 @@ resource "aws_ecs_task_definition" "app" {
   memory                   = 512
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
-  # Image is only used for the initial (bootstrap) revision.
-  # Subsequent revisions are registered by the CI/CD pipeline with an immutable build tag.
+  # Initial container image (subsequent revisions managed by CI/CD)
   container_definitions = jsonencode([{
     name      = "app"
     image     = var.container_image
@@ -79,7 +78,6 @@ resource "aws_ecs_service" "app" {
     container_port   = var.app_port
   }
 
-  # Automatically roll back to the last healthy task definition if a deployment fails
   deployment_circuit_breaker {
     enable   = true
     rollback = true
@@ -87,8 +85,8 @@ resource "aws_ecs_service" "app" {
 
   lifecycle {
     ignore_changes = [
-      task_definition, # Owned by CI/CD: Jenkins registers a new revision per build
-      desired_count,   # Owned by Application Auto Scaling
+      task_definition,
+      desired_count,
     ]
   }
 }
