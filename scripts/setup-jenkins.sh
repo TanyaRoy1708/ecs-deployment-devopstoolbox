@@ -37,6 +37,7 @@ sudo usermod -aG docker jenkins
 if id "ubuntu" &>/dev/null; then
   sudo usermod -aG docker ubuntu
 fi
+sudo systemctl restart jenkins
 
 # 7. Install Trivy for security scanning via APT repository
 sudo apt-get install -y wget apt-transport-https gnupg lsb-release

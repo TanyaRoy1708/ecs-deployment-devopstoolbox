@@ -217,6 +217,13 @@ docker compose up --build
 <details>
 <summary><b>2️⃣ Deploy the platform layer</b> (VPC, NAT, ECR, Jenkins)</summary>
 
+Create an EC2 Key Pair for SSH access (or update `jenkins_key_name` in `terraform.tfvars` with an existing key):
+```bash
+aws ec2 create-key-pair --key-name my-jenkins-server-key --query 'KeyMaterial' --output text > my-jenkins-server-key.pem
+chmod 400 my-jenkins-server-key.pem
+```
+
+Deploy platform infrastructure:
 ```bash
 cd terraform/platform
 terraform init && terraform apply
@@ -227,11 +234,14 @@ The Jenkins EC2 user-data runs [`setup-jenkins.sh`](./scripts/setup-jenkins.sh),
 <details>
 <summary><b>3️⃣ Configure Jenkins + SonarCloud</b></summary>
 
-1. On SonarCloud, import the repo and generate a token (**My Account → Security**).
-2. Jenkins → **System → SonarQube servers**: name `SonarCloud`, URL `https://sonarcloud.io`, token.
-3. Jenkins → **Tools → SonarQube Scanner**: name `sonar-scanner`, auto-install.
-4. Add a **Secret Text** credential `aws-account-id`.
-5. Create a Pipeline job → SCM: this repo, script path `jenkins/Jenkinsfile`.
+1. Update `sonar.projectKey` and `sonar.organization` in [`app/sonar-project.properties`](./app/sonar-project.properties) with your SonarCloud account.
+2. In SonarCloud, import this repo and generate a token (**My Account → Security → Global Analysis Token**).
+3. In SonarCloud → Project → **Administration → Webhooks**: Click **Create**, Name `Jenkins`, URL `http://<jenkins-ip>:8080/sonarqube-webhook/`.
+4. In Jenkins → **Manage Jenkins → Plugins → Available plugins**: Install **SonarQube Scanner**.
+5. In Jenkins → **Manage Jenkins → System → SonarQube servers**: Name `SonarCloud`, Server URL `https://sonarcloud.io`, Auth token.
+6. In Jenkins → **Manage Jenkins → Tools → SonarQube Scanner**: Name `sonar-scanner`, enable auto-install.
+7. In Jenkins → **Credentials → System → Global credentials**: Add Secret Text with ID `aws-account-id`.
+8. Create a Pipeline job pointing to this repo (`*/main`, `jenkins/Jenkinsfile`).
 </details>
 
 <details>
@@ -256,9 +266,14 @@ After this, every push to `main` performs a versioned rollout.
 <details>
 <summary><b>5️⃣ Monitoring</b></summary>
 
-1. Open Grafana at `http://<jenkins-ip>:3000`.
-2. Add a **CloudWatch** data source (IAM role auth).
+1. Open Grafana at `http://<jenkins-ip>:3000` (default: `admin/admin`).
+2. Add a **CloudWatch** data source (Default region `us-east-1`, authentication: AWS SDK Default).
 3. Import [`monitoring/grafana-dashboard.json`](./monitoring/grafana-dashboard.json).
+4. Update ALB panel dimensions (`LoadBalancer`, `TargetGroup`) with your environment ARN suffixes:
+   ```bash
+   terraform -chdir=terraform/app output alb_arn_suffix
+   terraform -chdir=terraform/app output target_group_arn_suffix
+   ```
 </details>
 
 <details>

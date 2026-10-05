@@ -96,6 +96,8 @@ terraform plan
 terraform apply
 ```
 
+> **Important:** Run the Jenkins pipeline once (or push an initial container image to ECR) before deploying Layer 2. Layer 2 queries ECR via `data.aws_ecr_image.bootstrap` to pin the initial task definition by digest.
+
 ### 3. Deploy Layer 2 (Application — Per Environment)
 
 Layer 2 uses partial configuration for environment isolation. Shared bucket & locking settings reside in `backend.tf`, while each environment passes its isolated state key via `environments/<env>/backend.hcl`.
