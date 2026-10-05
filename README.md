@@ -241,8 +241,14 @@ On the first run the ECS service doesn't exist yet, so the pipeline builds, scan
 
 ```bash
 cd terraform/app
-terraform init
+
+# Initialize backend for DEV (isolated state: app/dev/terraform.tfstate):
+terraform init -backend-config="environments/dev/backend.hcl" -reconfigure
 terraform apply -var-file="environments/dev/terraform.tfvars"
+
+# (Optional) To deploy PROD (isolated state: app/prod/terraform.tfstate):
+# terraform init -backend-config="environments/prod/backend.hcl" -reconfigure
+# terraform apply -var-file="environments/prod/terraform.tfvars"
 ```
 After this, every push to `main` performs a versioned rollout.
 </details>
@@ -259,9 +265,15 @@ After this, every push to `main` performs a versioned rollout.
 <summary><b>↩️ Manual rollback</b></summary>
 
 ```bash
+# Rollback DEV:
 aws ecs update-service --cluster ecs-project-dev-cluster \
   --service ecs-project-dev-service \
   --task-definition ecs-project-dev-task:<previous-revision>
+
+# Rollback PROD:
+aws ecs update-service --cluster ecs-project-prod-cluster \
+  --service ecs-project-prod-service \
+  --task-definition ecs-project-prod-task:<previous-revision>
 ```
 </details>
 
@@ -269,9 +281,22 @@ aws ecs update-service --cluster ecs-project-dev-cluster \
 <summary><b>🧹 Teardown</b></summary>
 
 ```bash
-cd terraform/app      && terraform destroy -var-file="environments/dev/terraform.tfvars"
-cd ../platform        && terraform destroy
-cd ../..              && ./scripts/cleanup-backend.sh
+# 1. Destroy Application Layer (Dev)
+cd terraform/app
+terraform init -backend-config="environments/dev/backend.hcl" -reconfigure
+terraform destroy -var-file="environments/dev/terraform.tfvars"
+
+# (If Prod was also deployed, destroy Prod:)
+# terraform init -backend-config="environments/prod/backend.hcl" -reconfigure
+# terraform destroy -var-file="environments/prod/terraform.tfvars"
+
+# 2. Destroy Platform Layer (including Jenkins EC2)
+cd ../platform
+terraform destroy
+
+# 3. Clean up S3 Remote State Bucket
+cd ../..
+./scripts/cleanup-backend.sh
 ```
 </details>
 

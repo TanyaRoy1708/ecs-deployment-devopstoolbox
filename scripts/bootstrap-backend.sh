@@ -31,7 +31,7 @@ APP_TEMPLATE="${TERRAFORM_DIR}/app/backend.tf.example"
 APP_OUTPUT="${TERRAFORM_DIR}/app/backend.tf"
 if [ -f "$APP_TEMPLATE" ]; then
     sed "s/<ACCOUNT_ID>/${ACCOUNT_ID}/g" "$APP_TEMPLATE" > "$APP_OUTPUT"
-    echo "Generated ${APP_OUTPUT} (key: app/dev/terraform.tfstate, lock: S3 native)"
+    echo "Generated ${APP_OUTPUT} (bucket: ${BUCKET_NAME}, lock: S3 native)"
 fi
 
 echo ""
@@ -43,5 +43,5 @@ echo "1. Layer 1 (Platform - Deploy Once):"
 echo "   cd terraform/platform && terraform init && terraform apply"
 echo ""
 echo "2. Layer 2 (App - Deploy Per Environment):"
-echo "   cd terraform/app && terraform init && terraform apply -var-file=environments/dev/terraform.tfvars"
+echo "   cd terraform/app && terraform init -backend-config=environments/dev/backend.hcl -reconfigure && terraform apply -var-file=environments/dev/terraform.tfvars"
 echo "--------------------------------------------------------"

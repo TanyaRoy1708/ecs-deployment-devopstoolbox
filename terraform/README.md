@@ -63,8 +63,12 @@ terraform/
 │   ├── outputs.tf                    # Application endpoints (ALB DNS)
 │   ├── backend.tf.example            # Remote backend template
 │   └── environments/
-│       ├── dev/terraform.tfvars      # Dev environment configuration
-│       └── prod/terraform.tfvars     # Prod environment configuration
+│       ├── dev/
+│       │   ├── backend.hcl           # S3 state key: app/dev/terraform.tfstate
+│       │   └── terraform.tfvars      # Dev environment configuration
+│       └── prod/
+│           ├── backend.hcl           # S3 state key: app/prod/terraform.tfstate
+│           └── terraform.tfvars      # Prod environment configuration
 │
 └── modules/                          # Shared reusable modules
     ├── networking/                   # VPC, Subnets, NAT Gateway, IGW, Routing
@@ -93,9 +97,44 @@ terraform apply
 ```
 
 ### 3. Deploy Layer 2 (Application — Per Environment)
+
+Layer 2 uses partial configuration for environment isolation. Shared bucket & locking settings reside in `backend.tf`, while each environment passes its isolated state key via `environments/<env>/backend.hcl`.
+
+#### Development (`dev`):
 ```bash
 cd ../app
-terraform init
+terraform init -backend-config="environments/dev/backend.hcl" -reconfigure
 terraform plan -var-file="environments/dev/terraform.tfvars"
 terraform apply -var-file="environments/dev/terraform.tfvars"
+```
+
+#### Production (`prod`):
+```bash
+cd ../app
+terraform init -backend-config="environments/prod/backend.hcl" -reconfigure
+terraform plan -var-file="environments/prod/terraform.tfvars"
+terraform apply -var-file="environments/prod/terraform.tfvars"
+```
+
+---
+
+## Teardown Instructions
+
+```bash
+# 1. Destroy Application Layer (Dev)
+cd terraform/app
+terraform init -backend-config="environments/dev/backend.hcl" -reconfigure
+terraform destroy -var-file="environments/dev/terraform.tfvars"
+
+# (If Prod was deployed, destroy Prod as well:)
+# terraform init -backend-config="environments/prod/backend.hcl" -reconfigure
+# terraform destroy -var-file="environments/prod/terraform.tfvars"
+
+# 2. Destroy Platform Layer (VPC, NAT, Jenkins EC2)
+cd ../platform
+terraform destroy
+
+# 3. Clean up S3 Remote State Bucket
+cd ../..
+./scripts/cleanup-backend.sh
 ```
